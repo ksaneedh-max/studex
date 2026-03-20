@@ -56,7 +56,7 @@ export default function Attendance() {
           // REQUIRED
           let required = 0;
           try {
-            required = Math.ceil((0.75 * total - present) / 0.75);
+            required = Math.ceil((75 * total - 100 * present) / (100 - 75));
           } catch {
             required = 0;
           }

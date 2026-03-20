@@ -8,13 +8,8 @@ import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import SectionTitle from "@/components/ui/SectionTitle";
 
-import { usePathname } from "next/navigation";
-import useSwipeNav from "@/lib/useSwipeNav";
-
 export default function Dashboard() {
   const router = useRouter();
-  const pathname = usePathname();
-  const { onTouchStart, onTouchEnd } = useSwipeNav(pathname);
   const { data, setData } = useAppStore();
 
   useEffect(() => {
@@ -72,16 +67,14 @@ export default function Dashboard() {
 
   if (!data) {
     return (
-      <div  onTouchStart={onTouchStart}
-  onTouchEnd={onTouchEnd} className="p-4 md:p-6 min-h-screen bg-gray-100">
+      <div className="p-4 md:p-6 min-h-screen bg-gray-100">
         Loading dashboard...
       </div>
     );
   }
 
   return (
-    <div onTouchStart={onTouchStart}
-  onTouchEnd={onTouchEnd} className="p-4 md:p-6 space-y-6 bg-gray-100 min-h-screen">
+    <div className="p-4 md:p-6 space-y-6 bg-gray-100 min-h-screen">
 
       {/* 👤 PROFILE */}
       <Card>
