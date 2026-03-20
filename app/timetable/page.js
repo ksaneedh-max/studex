@@ -29,6 +29,9 @@ export default function Timetable() {
 
   const currentRef = useRef(null);
 
+  // =========================
+  // 🔐 LOAD DATA
+  // =========================
   useEffect(() => {
     if (!data) {
       const saved = getData();
@@ -37,9 +40,11 @@ export default function Timetable() {
     }
   }, [data, setData, router]);
 
+  // =========================
+  // 🔁 OVERRIDES
+  // =========================
   useEffect(() => {
-    const saved = getOverrides();
-    setOverrides(saved || {});
+    setOverrides(getOverrides() || {});
   }, []);
 
   useEffect(() => {
@@ -56,6 +61,9 @@ export default function Timetable() {
 
   const yearData = plannerData["2026"] || {};
 
+  // =========================
+  // 📅 TODAY
+  // =========================
   const todayStr = getTodayStr();
   const todayOrder = getTodayDayOrder(yearData, todayStr);
   const todayKey = todayOrder ? `Day${todayOrder}` : null;
@@ -63,32 +71,47 @@ export default function Timetable() {
   const currentPeriod = getCurrentPeriod();
   const nextClass = getNextClassInfo();
 
-  const days = useMemo(() => Object.entries(timetable), [timetable]);
+  // =========================
+  // ✅ FIXED DAY ORDER
+  // =========================
+  const days = useMemo(() => {
+    return ["Day1", "Day2", "Day3", "Day4", "Day5"]
+      .map((key) => [key, timetable[key]])
+      .filter(([_, val]) => val);
+  }, [timetable]);
 
   useEffect(() => {
     if (!todayKey) return;
 
     const index = days.findIndex(([d]) => d === todayKey);
-    if (index !== -1) {
-      setActiveDayIndex(index);
-    }
+    if (index !== -1) setActiveDayIndex(index);
   }, [todayKey, days]);
 
-  // ✅ RESTORED OLD WORKING LOGIC (IMPORTANT FIX)
+  // =========================
+  // ✅ SUBJECT MATCHING FIX
+  // =========================
   const findSubject = (slotValue) => {
     if (!slotValue) return null;
 
-    const possible = slotValue.split("/").map((s) => s.trim());
+    const slots = slotValue.split("/").map((s) => s.trim());
 
-    // LAB handling
-    if (slotValue.startsWith("P")) {
-      return subjects.find((s) => s.slot === "LAB") || null;
-    }
+    return (
+      subjects.find((s) => {
+        if (!s.slot) return false;
 
-    return subjects.find((s) => possible.includes(s.slot)) || null;
+        if (slots.includes(s.slot)) return true;
+
+        return slots.some(
+          (slot) =>
+            slot.includes(s.slot) || s.slot.includes(slot)
+        );
+      }) || null
+    );
   };
 
-  // ✅ SIMPLE + RELIABLE COLOR MAP
+  // =========================
+  // 🎨 COLOR MAP
+  // =========================
   const subjectColorMap = useMemo(() => {
     const colors = [
       "bg-blue-100 border-blue-300",
@@ -114,6 +137,9 @@ export default function Timetable() {
     return map;
   }, [subjects]);
 
+  // =========================
+  // ✏️ OVERRIDE HANDLER
+  // =========================
   const handleOverride = (day, period, courseCode) => {
     const key = `${day}-${period}`;
 
@@ -127,6 +153,9 @@ export default function Timetable() {
     setOverrides({});
   };
 
+  // =========================
+  // 📍 AUTO SCROLL
+  // =========================
   useEffect(() => {
     currentRef.current?.scrollIntoView({
       behavior: "smooth",
@@ -134,6 +163,9 @@ export default function Timetable() {
     });
   }, [activeDayIndex, currentPeriod]);
 
+  // =========================
+  // 👆 SWIPE NAVIGATION
+  // =========================
   let touchStartX = 0;
 
   const handleTouchStart = (e) => {
@@ -152,6 +184,9 @@ export default function Timetable() {
     }
   };
 
+  // =========================
+  // 🚀 UI
+  // =========================
   return (
     <div className="p-4 md:p-6 bg-gray-100 min-h-screen">
       <div className="flex justify-between items-start mb-6">
@@ -176,8 +211,6 @@ export default function Timetable() {
         </div>
 
         <div className="flex gap-2">
-
-          {/* 🔥 Show ONLY when editing */}
           {isEditing && (
             <button
               onClick={handleResetAll}
@@ -187,7 +220,6 @@ export default function Timetable() {
             </button>
           )}
 
-          {/* ✏️ Edit Toggle */}
           <button
             onClick={() => setIsEditing((p) => !p)}
             className={`px-3 py-1.5 text-sm rounded-lg border transition ${
@@ -198,45 +230,49 @@ export default function Timetable() {
           >
             {isEditing ? "Done" : "Edit Optional"}
           </button>
-
         </div>
       </div>
 
-      {!todayKey ? (
-        <Card>
-          <p className="text-gray-500">No classes today 🎉</p>
-        </Card>
-      ) : (
-        <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-          <MobileTimetable
-            days={days}
-            activeDayIndex={activeDayIndex}
-            setActiveDayIndex={setActiveDayIndex}
-            todayKey={todayKey}
-            currentPeriod={currentPeriod}
-            findSubject={findSubject}
-            currentRef={currentRef}
-            isEditing={isEditing}
-            overrides={overrides}
-            handleOverride={handleOverride}
-            subjects={subjects}
-            subjectColorMap={subjectColorMap}
-          />
+      {/* ✅ ALWAYS SHOW TIMETABLE */}
+      <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
 
-          <DesktopTimetable
-            days={days}
-            todayKey={todayKey}
-            currentPeriod={currentPeriod}
-            findSubject={findSubject}
-            currentRef={currentRef}
-            isEditing={isEditing}
-            overrides={overrides}
-            handleOverride={handleOverride}
-            subjects={subjects}
-            subjectColorMap={subjectColorMap}
-          />
-        </div>
-      )}
+        {/* ✅ HOLIDAY MESSAGE */}
+        {!todayKey && (
+          <Card className="mb-4">
+            <p className="text-gray-500 text-center">
+              🎉 Holiday / No classes today
+            </p>
+          </Card>
+        )}
+
+        <MobileTimetable
+          days={days}
+          activeDayIndex={activeDayIndex}
+          setActiveDayIndex={setActiveDayIndex}
+          todayKey={todayKey}
+          currentPeriod={currentPeriod}
+          findSubject={findSubject}
+          currentRef={currentRef}
+          isEditing={isEditing}
+          overrides={overrides}
+          handleOverride={handleOverride}
+          subjects={subjects}
+          subjectColorMap={subjectColorMap}
+        />
+
+        <DesktopTimetable
+          days={days}
+          todayKey={todayKey}
+          currentPeriod={currentPeriod}
+          findSubject={findSubject}
+          currentRef={currentRef}
+          isEditing={isEditing}
+          overrides={overrides}
+          handleOverride={handleOverride}
+          subjects={subjects}
+          subjectColorMap={subjectColorMap}
+        />
+      </div>
     </div>
   );
 }

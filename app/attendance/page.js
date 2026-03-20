@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { getData } from "@/lib/storage";
 import { useRouter } from "next/navigation";
@@ -9,19 +9,22 @@ import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 
+import PredictModal from "@/components/predict/PredictModal";
+
 export default function Attendance() {
   const router = useRouter();
   const { data, setData } = useAppStore();
+
+  const [showPredict, setShowPredict] = useState(false);
+  const [predictedData, setPredictedData] = useState(null);
 
   useEffect(() => {
     if (!data) {
       const saved = getData();
       if (saved) setData(saved);
-      else router.push("/");
+      else router.replace("/");
     }
   }, [data, setData, router]);
-
-  const attendance = data?.attendance || [];
 
   if (!data) {
     return (
@@ -31,47 +34,74 @@ export default function Attendance() {
     );
   }
 
+  const attendance = data?.attendance || [];
+
+  // ✅ SWITCH BETWEEN ORIGINAL & PREDICTED
+  const displayAttendance = predictedData || attendance;
+
   return (
     <div className="p-4 md:p-6 bg-gray-100 min-h-screen">
 
-      <h1 className="text-xl md:text-2xl font-bold mb-4">
-        Attendance Overview
-      </h1>
+      {/* HEADER */}
+      <div className="flex items-center justify-between mb-4">
 
-      {attendance.length === 0 && (
+        <h1 className="text-xl md:text-2xl font-bold">
+          Attendance Overview
+        </h1>
+
+        <div className="flex gap-2">
+
+          {/* 🔁 REVERT */}
+          {predictedData && (
+            <button
+              onClick={() => setPredictedData(null)}
+              className="px-3 py-1.5 text-sm rounded-lg border bg-red-100 text-red-600 hover:bg-red-200"
+            >
+              Revert
+            </button>
+          )}
+
+          {/* 📅 PREDICT */}
+          <button
+            onClick={() => setShowPredict(true)}
+            className="px-3 py-1.5 text-sm rounded-lg border bg-black text-white hover:bg-gray-800"
+          >
+            Predict
+          </button>
+
+        </div>
+      </div>
+
+      {displayAttendance.length === 0 && (
         <div className="text-gray-500">
           No attendance data available
         </div>
       )}
 
-      {/* Responsive Grid */}
+      {/* GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
-        {attendance.map((c, i) => {
+        {displayAttendance.map((c) => {
           const total = c.total || 0;
           const absent = c.absent || 0;
           const present = total - absent;
-          const percentage = c.percentage || 0;
+          const percentage = Number(c.percentage) || 0;
 
-          // REQUIRED
-          let required = 0;
-          try {
-            required = Math.ceil((75 * total - 100 * present) / (100 - 75));
-          } catch {
-            required = 0;
-          }
-          if (required < 0) required = 0;
+          const MIN = 75;
 
-          // MARGIN
-          let margin = 0;
-          try {
-            margin = Math.floor((present - 0.75 * total) / 0.75);
-          } catch {
-            margin = 0;
-          }
-          if (margin < 0) margin = 0;
+          const required =
+            total > 0
+              ? Math.max(
+                  0,
+                  Math.ceil((MIN * total - 100 * present) / (100 - MIN))
+                )
+              : 0;
 
-          // STATUS
+          const margin = Math.max(
+            0,
+            Math.floor((present - (MIN / 100) * total) / (MIN / 100))
+          );
+
           let status = "Safe";
           let type = "safe";
 
@@ -84,19 +114,26 @@ export default function Attendance() {
           }
 
           return (
-            <Card key={i}>
+            <Card
+              key={c.id}
+              className={
+                predictedData
+                  ? "border-2 border-blue-500"
+                  : ""
+              }
+            >
 
-              {/* Title */}
+              {/* TITLE */}
               <h2 className="text-base md:text-lg font-semibold">
-                {c.course_title || "Unknown"}
+                {c.course_title ?? "Unknown"}
               </h2>
 
-              {/* Sub info */}
+              {/* ✅ FIXED HERE */}
               <p className="text-xs md:text-sm text-gray-500">
                 {c.code || "N/A"} • {c.category || "N/A"}
               </p>
 
-              {/* Stats */}
+              {/* STATS */}
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:text-sm">
 
                 <p>
@@ -114,7 +151,6 @@ export default function Attendance() {
                   {percentage}%
                 </p>
 
-                {/* ✅ Present */}
                 <p>
                   <span className="text-gray-500">Present:</span>{" "}
                   {present}
@@ -122,21 +158,19 @@ export default function Attendance() {
 
               </div>
 
-              {/* Footer */}
+              {/* FOOTER */}
               <div className="mt-4 flex justify-between items-center">
 
-                {/* ✅ Margin / Required (Highlighted) */}
                 {percentage < 75 ? (
                   <div className="text-red-600 font-bold text-sm md:text-base">
-                    Required: {required}
+                    Need: {required}
                   </div>
                 ) : (
                   <div className="text-green-600 font-bold text-sm md:text-base">
-                    Margin: {margin}
+                    Can skip: {margin}
                   </div>
                 )}
 
-                {/* Status Badge */}
                 <Badge text={status} type={type} />
 
               </div>
@@ -145,6 +179,16 @@ export default function Attendance() {
           );
         })}
       </div>
+
+      {/* MODAL */}
+      {showPredict && (
+        <PredictModal
+          onClose={() => setShowPredict(false)}
+          onApply={(result) => setPredictedData(result)}
+          data={data}
+        />
+      )}
+
     </div>
   );
 }
