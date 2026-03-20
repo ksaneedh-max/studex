@@ -7,7 +7,6 @@ import Card from "@/components/ui/Card";
 import SectionTitle from "@/components/ui/SectionTitle";
 
 export default function Planner() {
-
   const yearData = plannerData["2026"] || {};
   const months = Object.keys(yearData);
 
@@ -24,7 +23,6 @@ export default function Planner() {
   const [selectedMonth, setSelectedMonth] = useState(initialMonth);
 
   const days = yearData[selectedMonth] || [];
-
   const todayStr = today.toISOString().split("T")[0];
 
   const todayRef = useRef(null);
@@ -39,143 +37,145 @@ export default function Planner() {
   }, [selectedMonth]);
 
   return (
-    <div
-      className="p-4 md:p-6 bg-gray-100 min-h-screen overflow-x-hidden"
-    >
+    <div className="w-full min-h-screen bg-gray-100 overflow-x-hidden">
+      {/* Center container (prevents layout stretching) */}
+      <div className="max-w-screen-xl mx-auto p-4 md:p-6">
 
-      {/* Header */}
-      <h1 className="text-lg md:text-2xl font-bold mb-4 break-words">
-        Academic Planner 2026
-      </h1>
+        {/* Header */}
+        <h1 className="text-lg md:text-2xl font-bold mb-4 break-words">
+          Academic Planner 2026
+        </h1>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-2 text-xs mb-4">
-        <span className="px-2 py-1 rounded-full bg-red-100 text-red-600">
-          Holiday
-        </span>
-        <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-600">
-          Event
-        </span>
-        <span className="px-2 py-1 rounded-full bg-green-100 text-green-600">
-          Day Order
-        </span>
-        <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
-          Today
-        </span>
-      </div>
+        {/* Legend */}
+        <div className="flex flex-wrap gap-2 text-xs mb-4">
+          <span className="px-2 py-1 rounded-full bg-red-100 text-red-600">
+            Holiday
+          </span>
+          <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-600">
+            Event
+          </span>
+          <span className="px-2 py-1 rounded-full bg-green-100 text-green-600">
+            Day Order
+          </span>
+          <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+            Today
+          </span>
+        </div>
 
-      {/* Month Selector */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-5">
+        {/* Month Selector */}
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-5 max-w-full scrollbar-hide">
+          {months.map((month) => (
+            <button
+              key={month}
+              onClick={() => setSelectedMonth(month)}
+              className={`
+                px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition flex-shrink-0
+                ${
+                  selectedMonth === month
+                    ? "bg-black text-white"
+                    : "bg-white border text-gray-600"
+                }
+              `}
+            >
+              {month}
+            </button>
+          ))}
+        </div>
 
-        {months.map((month) => (
-          <button
-            key={month}
-            onClick={() => setSelectedMonth(month)}
-            className={`
-              px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition flex-shrink-0
-              ${
-                selectedMonth === month
-                  ? "bg-black text-white"
-                  : "bg-white border text-gray-600"
-              }
-            `}
-          >
-            {month}
-          </button>
-        ))}
+        {/* Calendar */}
+        <div className="w-full">
+          <Card>
+            <SectionTitle>{selectedMonth}</SectionTitle>
 
-      </div>
+            {days.length === 0 ? (
+              <p className="text-gray-500">No data available</p>
+            ) : (
+              <div
+                className="
+                  grid gap-3 w-full
+                  grid-cols-2
+                  sm:grid-cols-3
+                  md:grid-cols-4
+                  lg:grid-cols-5
+                  xl:grid-cols-7
+                "
+              >
+                {days.map((d) => {
+                  const isHoliday = !!d.holiday;
+                  const isEvent = !!d.event;
 
-      {/* Calendar */}
-      <div className="max-w-full overflow-hidden">
-        <Card>
-          <SectionTitle>{selectedMonth}</SectionTitle>
+                  const dateObj = new Date(d.date);
+                  const dayNumber = dateObj.getDate();
 
-          {days.length === 0 ? (
-            <p className="text-gray-500">No data available</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 w-full">
+                  const isToday = d.date === todayStr;
 
-              {days.map((d) => {
-                const isHoliday = !!d.holiday;
-                const isEvent = !!d.event;
+                  let bg = "bg-white";
 
-                const dateObj = new Date(d.date);
-                const dayNumber = dateObj.getDate();
+                  if (isHoliday) bg = "bg-red-100";
+                  else if (isEvent) bg = "bg-blue-100";
+                  else if (d.dayOrder) bg = "bg-green-50";
 
-                const isToday = d.date === todayStr;
+                  return (
+                    <div
+                      key={d.date}
+                      ref={isToday ? todayRef : null}
+                      className={`
+                        p-3 rounded-xl border text-sm transition
+                        min-w-0 break-words overflow-hidden
+                        ${bg}
+                        ${
+                          isToday
+                            ? "ring-2 ring-black bg-yellow-100 shadow-md"
+                            : ""
+                        }
+                      `}
+                    >
+                      {/* Top Row */}
+                      <div className="flex justify-between items-center gap-1">
+                        <span className="font-semibold text-base">
+                          {dayNumber}
+                        </span>
 
-                let bg = "bg-white";
+                        <span className="text-[10px] text-gray-500 truncate">
+                          {d.day}
+                        </span>
+                      </div>
 
-                if (isHoliday) bg = "bg-red-100";
-                else if (isEvent) bg = "bg-blue-100";
-                else if (d.dayOrder) bg = "bg-green-50";
+                      {/* Day Order */}
+                      {d.dayOrder && (
+                        <div className="mt-1 text-green-700 font-medium text-xs break-words">
+                          Day {d.dayOrder}
+                        </div>
+                      )}
 
-                return (
-                  <div
-                    key={d.date}
-                    ref={isToday ? todayRef : null}
-                    className={`
-                      p-3 rounded-xl border text-sm transition
-                      ${bg}
-                      ${
-                        isToday
-                          ? "ring-2 ring-black bg-yellow-100 shadow-md"
-                          : ""
-                      }
-                    `}
-                  >
+                      {/* Holiday */}
+                      {d.holiday && (
+                        <div className="mt-1 text-red-600 text-xs break-words">
+                          {d.holiday}
+                        </div>
+                      )}
 
-                    {/* Top Row */}
-                    <div className="flex justify-between items-center">
+                      {/* Event */}
+                      {d.event && (
+                        <div className="mt-1 text-blue-600 text-xs break-words">
+                          {d.event}
+                        </div>
+                      )}
 
-                      <span className="font-semibold text-base">
-                        {dayNumber}
-                      </span>
-
-                      <span className="text-[10px] text-gray-500">
-                        {d.day}
-                      </span>
-
+                      {/* Today Badge */}
+                      {isToday && (
+                        <div className="mt-2 inline-block text-[10px] font-bold bg-black text-white px-2 py-0.5 rounded">
+                          TODAY
+                        </div>
+                      )}
                     </div>
-
-                    {/* Day Order */}
-                    {d.dayOrder && (
-                      <div className="mt-1 text-green-700 font-medium text-xs">
-                        Day {d.dayOrder}
-                      </div>
-                    )}
-
-                    {/* Holiday */}
-                    {d.holiday && (
-                      <div className="mt-1 text-red-600 text-xs line-clamp-2">
-                        {d.holiday}
-                      </div>
-                    )}
-
-                    {/* Event */}
-                    {d.event && (
-                      <div className="mt-1 text-blue-600 text-xs line-clamp-2">
-                        {d.event}
-                      </div>
-                    )}
-
-                    {/* Today Badge */}
-                    {isToday && (
-                      <div className="mt-2 inline-block text-[10px] font-bold bg-black text-white px-2 py-0.5 rounded">
-                        TODAY
-                      </div>
-                    )}
-
-                  </div>
-                );
-              })}
-
-            </div>
-          )}
-        </Card>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
-
     </div>
   );
 }

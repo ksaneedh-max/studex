@@ -299,44 +299,72 @@ export default function Timetable() {
 
           {/* 💻 DESKTOP (UNCHANGED) */}
           <div className="hidden md:block space-y-6">
-            {days.map(([day, periods]) => {
-              const isToday = day === todayKey;
+          {days.map(([day, periods]) => {
+            const isToday = day === todayKey;
 
-              return (
-                <Card key={day} className={isToday ? "ring-2 ring-yellow-400" : ""}>
-                  <SectionTitle>
-                    {day} {isToday && "🔥"}
-                  </SectionTitle>
+            return (
+              <Card key={day} className={isToday ? "ring-2 ring-yellow-400" : ""}>
+                <SectionTitle>
+                  {day} {isToday && "🔥"}
+                </SectionTitle>
 
-                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
 
-                    {Object.entries(periods).map(([period, value]) => {
-                      const subject = findSubject(value);
+                  {Object.entries(periods).map(([period, value]) => {
+                    const subject = findSubject(value);
+                    const isCurrent =
+                      isToday && period === currentPeriod;
 
-                      let style = "bg-gray-50 border-gray-200";
-                      if (subject) {
-                        style = getColor(subject.course_code);
-                      }
+                    let style = "bg-gray-50 border-gray-200";
+                    if (subject) {
+                      style = getColor(subject.course_code);
+                    }
 
-                      return (
-                        <div
-                          key={period}
-                          className={`border rounded-xl p-4 ${style}`}
-                        >
-                          <p className="font-semibold">
-                            {subject
-                              ? subject.course_title
-                              : "Free"}
+                    const timing = PERIOD_TIMINGS.find(
+                      (p) => p.name === period
+                    );
+
+                    return (
+                      <div
+                        key={period}
+                        className={`border rounded-xl p-4 ${style} min-w-0 ${
+                          isCurrent ? "ring-2 ring-black shadow-md" : ""
+                        }`}
+                      >
+                        {/* ⏰ TIME */}
+                        {timing && (
+                          <p className="text-xs text-gray-500">
+                            {timing.start} - {timing.end}
                           </p>
-                        </div>
-                      );
-                    })}
+                        )}
 
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                        {/* 📘 SUBJECT */}
+                        <p className="font-semibold break-words">
+                          {subject ? subject.course_title : "Free"}
+                        </p>
+
+                        {/* 👨‍🏫 DETAILS */}
+                        {subject && (
+                          <p className="text-xs text-gray-600 break-words">
+                            {subject.faculty_name} • {subject.room_no}
+                          </p>
+                        )}
+
+                        {/* 🔥 CURRENT */}
+                        {isCurrent && (
+                          <span className="inline-block mt-2 text-xs font-bold bg-black text-white px-2 py-1 rounded">
+                            NOW
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                </div>
+              </Card>
+            );
+          })}
+        </div>
 
         </div>
       )}
