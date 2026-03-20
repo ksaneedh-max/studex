@@ -24,8 +24,8 @@ export default function MobileHeader() {
       </button>
 
       {/* Title */}
-      <h1 className="font-semibold text-lg">
-        Student Portal
+      <h1 className="font-bold tracking-tight text-lg">
+        Academia DeX
       </h1>
     </div>
   );

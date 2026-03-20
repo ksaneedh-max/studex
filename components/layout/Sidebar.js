@@ -129,7 +129,7 @@ export default function Sidebar() {
         {/* Header */}
         <div className="p-4 border-b">
           <h2 className="text-lg font-bold tracking-tight">
-            Student Portal
+            Academia DeX
           </h2>
           <p className="text-xs text-gray-500">
             Navigation
