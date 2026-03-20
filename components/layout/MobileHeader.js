@@ -2,8 +2,17 @@
 
 export default function MobileHeader() {
   return (
-    <div className="md:hidden flex items-center gap-3 p-4 border-b bg-white">
-
+    <div
+      className="
+        md:hidden
+        fixed top-0 left-0 right-0
+        z-50
+        flex items-center gap-3
+        p-4
+        bg-white/90 backdrop-blur
+        border-b
+      "
+    >
       {/* Hamburger */}
       <button
         onClick={() =>
@@ -18,7 +27,6 @@ export default function MobileHeader() {
       <h1 className="font-semibold text-lg">
         Student Portal
       </h1>
-
     </div>
   );
 }

@@ -27,6 +27,20 @@ export default function Planner() {
 
   const todayRef = useRef(null);
 
+  /* ✅ FIX: REAL mobile viewport height */
+  useEffect(() => {
+    const setVH = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
+    };
+
+    setVH();
+    window.addEventListener("resize", setVH);
+
+    return () => window.removeEventListener("resize", setVH);
+  }, []);
+
+  /* scroll to today */
   useEffect(() => {
     if (todayRef.current) {
       todayRef.current.scrollIntoView({
@@ -37,10 +51,12 @@ export default function Planner() {
   }, [selectedMonth]);
 
   return (
-    <div className="w-full min-h-dvh bg-gray-100 overflow-x-hidden">
-
+    <div
+      className="w-full bg-gray-100 overflow-x-hidden relative"
+      style={{ minHeight: "calc(var(--vh, 1vh) * 100)" }}
+    >
       {/* Container */}
-      <div className="max-w-screen-xl mx-auto p-4 md:p-6 pb-24">
+      <div className="max-w-screen-xl mx-auto p-4 md:p-6 pb-28">
 
         {/* Header */}
         <h1 className="text-lg md:text-2xl font-bold mb-4 break-words">
@@ -63,7 +79,7 @@ export default function Planner() {
           </span>
         </div>
 
-        {/* Month Selector (now sticky for better UX) */}
+        {/* Month Selector */}
         <div className="sticky top-0 z-10 bg-gray-100 pb-2">
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {months.map((month) => (

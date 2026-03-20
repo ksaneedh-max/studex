@@ -36,7 +36,7 @@ export default function Sidebar() {
     { name: "Planner", href: "/planner" },
   ];
 
-  // Open from header
+  /* ---------- OPEN FROM HEADER ---------- */
   useEffect(() => {
     const openSidebar = () => setOpen(true);
     document.addEventListener("toggle-sidebar", openSidebar);
@@ -45,12 +45,12 @@ export default function Sidebar() {
     };
   }, []);
 
-  // Close on route change
+  /* ---------- CLOSE ON ROUTE ---------- */
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
-  // Refresh
+  /* ---------- REFRESH ---------- */
   const handleRefresh = async () => {
     try {
       if (!credentials?.email || !credentials?.password) {
@@ -93,7 +93,7 @@ export default function Sidebar() {
     }
   };
 
-  // Logout
+  /* ---------- LOGOUT ---------- */
   const handleLogout = async () => {
     try {
       await fetch("https://rev-api-yoxt.onrender.com/logout", {
@@ -137,8 +137,7 @@ export default function Sidebar() {
         </div>
 
         {/* Links */}
-        <div className="flex flex-col gap-1 p-3 flex-1 overflow-y-auto">
-
+        <div className="flex flex-col gap-1 p-3 flex-1 overflow-y-auto pb-6">
           {links.map((link) => {
             const active = pathname === link.href;
 
@@ -160,17 +159,14 @@ export default function Sidebar() {
               >
                 {link.name}
 
-                {active && (
-                  <span className="text-xs">●</span>
-                )}
+                {active && <span className="text-xs">●</span>}
               </Link>
             );
           })}
-
         </div>
 
         {/* Footer Actions */}
-        <div className="p-3 border-t space-y-2">
+        <div className="p-3 border-t space-y-2 pb-24 md:pb-3 bg-white">
 
           {/* Refresh */}
           <button

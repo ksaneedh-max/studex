@@ -3,39 +3,58 @@ import Sidebar from "@/components/layout/Sidebar";
 import AuthProvider from "@/components/auth/AuthProvider";
 import MobileHeader from "@/components/layout/MobileHeader";
 import BottomNav from "@/components/layout/BottomNav";
+import ViewportFix from "@/components/layout/ViewportFix";
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>
+      <head>
+        {/* ✅ Viewport fix */}
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+        />
+      </head>
 
+      <body>
         <AuthProvider>
 
-          <div className="flex h-screen overflow-hidden">
+          {/* ✅ Fix mobile viewport height */}
+          <ViewportFix />
 
-            {/* Sidebar (desktop + mobile drawer) */}
+          <div
+            className="flex w-full overflow-x-hidden"
+            style={{ minHeight: "calc(var(--vh, 1vh) * 100)" }}
+          >
+            {/* Sidebar */}
             <Sidebar />
 
-            {/* Main Content Area */}
-            <div className="flex flex-col flex-1">
+            {/* Main */}
+            <div className="flex flex-col flex-1 min-w-0">
 
-              {/* Mobile Header */}
+              {/* ✅ Fixed Header */}
               <MobileHeader />
 
-              {/* Page Content */}
-              <main className="flex-1 overflow-y-auto bg-gray-100 p-4 md:p-6 pb-20 md:pb-6">
+              {/* ✅ Content with proper spacing */}
+              <main
+                className="
+                  flex-1 overflow-y-auto bg-gray-100
+                  p-4 md:p-6
+                  pt-20 md:pt-6
+                  pb-24 md:pb-6
+                  min-w-0
+                "
+              >
                 {children}
               </main>
 
             </div>
-
           </div>
 
-          {/* Bottom Navigation (mobile only) */}
+          {/* Bottom Nav */}
           <BottomNav />
 
         </AuthProvider>
-
       </body>
     </html>
   );
