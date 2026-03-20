@@ -37,9 +37,10 @@ export default function Planner() {
   }, [selectedMonth]);
 
   return (
-    <div className="w-full min-h-screen bg-gray-100 overflow-x-hidden">
-      {/* Center container (prevents layout stretching) */}
-      <div className="max-w-screen-xl mx-auto p-4 md:p-6">
+    <div className="w-full min-h-dvh bg-gray-100 overflow-x-hidden">
+
+      {/* Container */}
+      <div className="max-w-screen-xl mx-auto p-4 md:p-6 pb-24">
 
         {/* Header */}
         <h1 className="text-lg md:text-2xl font-bold mb-4 break-words">
@@ -62,28 +63,30 @@ export default function Planner() {
           </span>
         </div>
 
-        {/* Month Selector */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-5 max-w-full scrollbar-hide">
-          {months.map((month) => (
-            <button
-              key={month}
-              onClick={() => setSelectedMonth(month)}
-              className={`
-                px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition flex-shrink-0
-                ${
-                  selectedMonth === month
-                    ? "bg-black text-white"
-                    : "bg-white border text-gray-600"
-                }
-              `}
-            >
-              {month}
-            </button>
-          ))}
+        {/* Month Selector (now sticky for better UX) */}
+        <div className="sticky top-0 z-10 bg-gray-100 pb-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {months.map((month) => (
+              <button
+                key={month}
+                onClick={() => setSelectedMonth(month)}
+                className={`
+                  px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition flex-shrink-0
+                  ${
+                    selectedMonth === month
+                      ? "bg-black text-white"
+                      : "bg-white border text-gray-600"
+                  }
+                `}
+              >
+                {month}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Calendar */}
-        <div className="w-full">
+        <div className="w-full mt-3">
           <Card>
             <SectionTitle>{selectedMonth}</SectionTitle>
 
