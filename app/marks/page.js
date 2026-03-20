@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 // UI
 import Card from "@/components/ui/Card";
 import SectionTitle from "@/components/ui/SectionTitle";
+import GradePredictor from "@/components/GradePredictor";
 
 export default function Marks() {
   const router = useRouter();
@@ -27,12 +28,10 @@ export default function Marks() {
     return Number.isInteger(n) ? n : n.toFixed(1);
   };
 
-  // ✅ Filter only theory subjects
   const allMarks = data?.marks || [];
 
   const marksMap = {};
 
-  // Group by subject (use code as key)
   allMarks.forEach((m) => {
     const key = m.code || m.course_title;
 
@@ -43,17 +42,12 @@ export default function Marks() {
     marksMap[key].push(m);
   });
 
-  // Apply logic
   const marks = Object.values(marksMap).map((group) => {
     const theory = group.find(
       (g) => g.course_type !== "Practical"
     );
 
-    // If theory exists → use it
-    if (theory) return theory;
-
-    // Else → return practical
-    return group[0];
+    return theory || group[0];
   });
 
   if (!data) {
@@ -82,7 +76,6 @@ export default function Marks() {
 
         {marks.map((m, i) => {
 
-          // 📊 Safe calculation
           let totalObtained = 0;
           let totalMax = 0;
 
@@ -96,18 +89,42 @@ export default function Marks() {
               ? formatNumber((totalObtained / totalMax) * 100)
               : 0;
 
+          // 🔥 Title Fix Logic
+          const title = m.course_title || "";
+          const code = m.code || "";
+
+          const isSame =
+            title.trim().toLowerCase() === code.trim().toLowerCase();
+
+          const displayTitle =
+            !title || isSame
+              ? code || "Unknown Subject"
+              : title;
+
           return (
             <Card key={i}>
 
-              {/* Subject Title */}
-              <SectionTitle>
-                {m.course_title || "Unknown Subject"}
-              </SectionTitle>
+              {/* 🔥 Wrap content to position predictor */}
+              <div className="relative">
 
-              {/* Code */}
-              <p className="text-xs md:text-sm text-gray-500">
-                {m.code || "N/A"}
-              </p>
+                {/* 🚀 Predict Button (top-right) */}
+                <div className="absolute top-0 right-0">
+                  <GradePredictor tests={m.tests} />
+                </div>
+
+                {/* Subject Title */}
+                <SectionTitle>
+                  {displayTitle}
+                </SectionTitle>
+
+                {/* Code */}
+                {!isSame && code && (
+                  <p className="text-xs md:text-sm text-gray-500">
+                    {code}
+                  </p>
+                )}
+
+              </div>
 
               {/* Tests */}
               <div className="mt-3 space-y-2 text-xs md:text-sm">
@@ -136,16 +153,14 @@ export default function Marks() {
 
               </div>
 
-              {/* Total Section */}
+              {/* Total */}
               <div className="mt-4 pt-3 border-t text-center">
 
-                {/* Total */}
                 <div className="text-xl md:text-2xl font-bold">
                   {formatNumber(totalObtained)} /{" "}
                   {formatNumber(totalMax)}
                 </div>
 
-                {/* Percentage */}
                 <div className="text-sm md:text-base font-semibold text-blue-600 mt-1">
                   Overall: {percent}%
                 </div>
