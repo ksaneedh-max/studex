@@ -27,7 +27,11 @@ export default function Attendance() {
   }, [data, setData, router]);
 
   if (!data) {
-    return <div className="p-4">Loading attendance...</div>;
+    return (
+      <div className="p-4 md:p-6 min-h-screen bg-gray-100">
+        Loading attendance...
+      </div>
+    );
   }
 
   const attendance = data?.attendance || [];
@@ -46,7 +50,7 @@ export default function Attendance() {
           {predictedData && (
             <button
               onClick={() => setPredictedData(null)}
-              className="px-3 py-1.5 text-sm rounded-lg border bg-red-100 text-red-600"
+              className="px-3 py-1.5 text-sm rounded-lg border bg-red-100 text-red-600 hover:bg-red-200"
             >
               Revert
             </button>
@@ -54,7 +58,7 @@ export default function Attendance() {
 
           <button
             onClick={() => setShowPredict(true)}
-            className="px-3 py-1.5 text-sm rounded-lg border bg-black text-white"
+            className="px-3 py-1.5 text-sm rounded-lg border bg-black text-white hover:bg-gray-800"
           >
             Predict
           </button>
@@ -145,158 +149,158 @@ export default function Attendance() {
             <Card key={c.id}>
 
               {/* HEADER */}
-              <div className="flex justify-between">
-                <h2 className="font-semibold">{c.course_title}</h2>
+              <div className="flex items-start justify-between gap-2">
+                <h2 className="text-base md:text-lg font-semibold">
+                  {c.course_title ?? "Unknown"}
+                </h2>
 
                 <div className="flex gap-1">
                   {isTheory && (
-                    <span className="text-xs px-2 rounded bg-gray-200">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
                       THEORY
                     </span>
                   )}
                   {isPractical && (
-                    <span className="text-xs px-2 rounded bg-purple-500 text-white">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500 text-white">
                       PRACTICAL
                     </span>
                   )}
                 </div>
               </div>
 
-              <p className="text-xs text-gray-500">
-                {c.code} • {c.category}
+              {/* SUB */}
+              <p className="text-xs md:text-sm text-gray-500">
+                {c.code || "N/A"} • {c.category || "N/A"}
               </p>
 
               {/* STATS */}
-              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:text-sm">
 
                 <p>
-                  Conducted:{" "}
+                  <span className="text-gray-500">Conducted:</span>{" "}
                   {predictedData ? (
-                    <>
+                    <span className="whitespace-nowrap">
                       {oldTotal} →{" "}
-                      <span className={`${getColor(total, oldTotal)} whitespace-nowrap`}>
+                      <span className={getColor(total, oldTotal)}>
                         {total} {getArrow(total, oldTotal)}
                       </span>
-                    </>
+                    </span>
                   ) : total}
                 </p>
 
                 <p>
-                  Absent:{" "}
+                  <span className="text-gray-500">Absent:</span>{" "}
                   {predictedData ? (
-                    <>
+                    <span className="whitespace-nowrap">
                       {oldAbsent} →{" "}
-                      <span className={`${getColor(absent, oldAbsent, true)} whitespace-nowrap`}>
+                      <span className={getColor(absent, oldAbsent, true)}>
                         {absent} {getArrow(absent, oldAbsent, true)}
                       </span>
-                    </>
+                    </span>
                   ) : absent}
                 </p>
 
                 <p>
-                  Attendance:{" "}
+                  <span className="text-gray-500">Attendance:</span>{" "}
                   {predictedData ? (
-                    <>
+                    <span className="whitespace-nowrap">
                       {oldPercentage}% →{" "}
-                      <span className={`${getColor(percentage, oldPercentage)} whitespace-nowrap`}>
+                      <span className={getColor(percentage, oldPercentage)}>
                         {percentage}% {getArrow(percentage, oldPercentage)}
                       </span>
-                    </>
+                    </span>
                   ) : `${percentage}%`}
                 </p>
 
                 <p>
-                  Present:{" "}
+                  <span className="text-gray-500">Present:</span>{" "}
                   {predictedData ? (
-                    <>
+                    <span className="whitespace-nowrap">
                       {oldPresent} →{" "}
-                      <span className={`${getColor(present, oldPresent)} whitespace-nowrap`}>
+                      <span className={getColor(present, oldPresent)}>
                         {present} {getArrow(present, oldPresent)}
                       </span>
-                    </>
+                    </span>
                   ) : present}
                 </p>
 
               </div>
 
-              {/* FOOTER (SCROLL FIX HERE) */}
-              <div className="mt-4 flex justify-between items-center overflow-x-auto">
+              {/* FOOTER */}
+              <div className="mt-4 flex justify-between items-center">
 
-                <div className="flex-shrink-0 whitespace-nowrap">
-                  {(() => {
-                    const wasSafe = oldPercentage >= 75;
-                    const isSafe = percentage >= 75;
+                {(() => {
+                  const wasSafe = oldPercentage >= 75;
+                  const isSafe = percentage >= 75;
 
-                    if (predictedData) {
+                  if (predictedData) {
 
-                      if (wasSafe && isSafe) {
-                        const diff = margin - oldMargin;
-                        return (
-                          <div className="text-green-600 font-bold">
-                            Margin: {oldMargin} → {margin}{" "}
-                            {diff !== 0 && (
-                              <span>
-                                {diff > 0 ? "↑" : "↓"} ({diff > 0 ? "+" : ""}{diff})
-                              </span>
-                            )}
-                          </div>
-                        );
-                      }
-
-                      if (wasSafe && !isSafe) {
-                        const diff = required - oldMargin;
-                        return (
-                          <div className="text-red-600 font-bold">
-                            Margin: {oldMargin} → Required: {required}{" "}
+                    if (wasSafe && isSafe) {
+                      const diff = margin - oldMargin;
+                      return (
+                        <div className="text-green-600 font-bold text-sm md:text-base whitespace-nowrap">
+                          Margin: {oldMargin} → {margin} {diff !== 0 && (
                             <span>
-                              ↓ ({diff > 0 ? "+" : ""}{diff})
+                              {diff > 0 ? "↑" : "↓"} ({diff > 0 ? "+" : ""}{diff})
                             </span>
-                          </div>
-                        );
-                      }
-
-                      if (!wasSafe && isSafe) {
-                        const diff = margin - oldRequired;
-                        return (
-                          <div className="text-green-600 font-bold">
-                            Required: {oldRequired} → Margin: {margin}{" "}
-                            <span>
-                              ↑ ({diff > 0 ? "+" : ""}{diff})
-                            </span>
-                          </div>
-                        );
-                      }
-
-                      if (!wasSafe && !isSafe) {
-                        const diff = required - oldRequired;
-                        const isBetter = diff < 0;
-
-                        return (
-                          <div className={`font-bold ${
-                            isBetter ? "text-green-600" : "text-red-600"
-                          }`}>
-                            Required: {oldRequired} → {required}{" "}
-                            {diff !== 0 && (
-                              <span>
-                                {isBetter ? "↓" : "↑"} ({diff > 0 ? "+" : ""}{diff})
-                              </span>
-                            )}
-                          </div>
-                        );
-                      }
+                          )}
+                        </div>
+                      );
                     }
 
-                    return percentage < 75 ? (
-                      <div className="text-red-600 font-bold">
-                        Required: {required}
-                      </div>
-                    ) : (
-                      <div className="text-green-600 font-bold">
-                        Margin: {margin}
-                      </div>
-                    );
-                  })()}
-                </div>
+                    if (wasSafe && !isSafe) {
+                      const diff = required - oldMargin;
+                      return (
+                        <div className="text-red-600 font-bold text-sm md:text-base whitespace-nowrap">
+                          Margin: {oldMargin} → Required: {required}{" "}
+                          <span>
+                            ↓ ({diff > 0 ? "+" : ""}{diff})
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    if (!wasSafe && isSafe) {
+                      const diff = margin - oldRequired;
+                      return (
+                        <div className="text-green-600 font-bold text-sm md:text-base whitespace-nowrap">
+                          Required: {oldRequired} → Margin: {margin}{" "}
+                          <span>
+                            ↑ ({diff > 0 ? "+" : ""}{diff})
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    if (!wasSafe && !isSafe) {
+                      const diff = required - oldRequired;
+                      const isBetter = diff < 0;
+
+                      return (
+                        <div className={`font-bold text-sm md:text-base whitespace-nowrap ${
+                          isBetter ? "text-green-600" : "text-red-600"
+                        }`}>
+                          Required: {oldRequired} → {required}{" "}
+                          {diff !== 0 && (
+                            <span>
+                              {isBetter ? "↓" : "↑"} ({diff > 0 ? "+" : ""}{diff})
+                            </span>
+                          )}
+                        </div>
+                      );
+                    }
+                  }
+
+                  return percentage < 75 ? (
+                    <div className="text-red-600 font-bold text-sm md:text-base">
+                      Required: {required}
+                    </div>
+                  ) : (
+                    <div className="text-green-600 font-bold text-sm md:text-base">
+                      Margin: {margin}
+                    </div>
+                  );
+                })()}
 
                 <Badge text={status} type={type} />
 
