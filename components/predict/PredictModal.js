@@ -100,7 +100,7 @@ export default function PredictModal({ onClose, data, onApply }) {
     : 0;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 px-3 pt-6 pb-24">
+    <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 px-3 pt-24 pb-24">
 
       {/* 🔥 WRAPPER FOR BANNER + CARD */}
       <div className="w-full max-w-sm space-y-2">
