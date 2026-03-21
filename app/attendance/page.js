@@ -189,30 +189,6 @@ export default function Attendance() {
                 </p>
 
                 <p>
-                  <span className="text-gray-500">Absent:</span>{" "}
-                  {predictedData ? (
-                    <span className="whitespace-nowrap">
-                      {oldAbsent} →{" "}
-                      <span className={getColor(absent, oldAbsent, true)}>
-                        {absent} {getArrow(absent, oldAbsent, true)}
-                      </span>
-                    </span>
-                  ) : absent}
-                </p>
-
-                <p>
-                  <span className="text-gray-500">Attendance:</span>{" "}
-                  {predictedData ? (
-                    <span className="whitespace-nowrap">
-                      {oldPercentage}% →{" "}
-                      <span className={getColor(percentage, oldPercentage)}>
-                        {percentage}% {getArrow(percentage, oldPercentage)}
-                      </span>
-                    </span>
-                  ) : `${percentage}%`}
-                </p>
-
-                <p>
                   <span className="text-gray-500">Present:</span>{" "}
                   {predictedData ? (
                     <span className="whitespace-nowrap">
@@ -222,6 +198,31 @@ export default function Attendance() {
                       </span>
                     </span>
                   ) : present}
+                </p>
+
+                {/* ✅ ONLY CHANGE HERE */}
+                <p>
+                  <span className="text-gray-500">Attendance:</span>{" "}
+                  {predictedData ? (
+                    <span className="whitespace-nowrap">
+                      {Math.round(oldPercentage)}% →{" "}
+                      <span className={getColor(percentage, oldPercentage)}>
+                        {Math.round(percentage)}% {getArrow(percentage, oldPercentage)}
+                      </span>
+                    </span>
+                  ) : `${percentage}%`}
+                </p>
+
+                <p>
+                  <span className="text-gray-500">Absent:</span>{" "}
+                  {predictedData ? (
+                    <span className="whitespace-nowrap">
+                      {oldAbsent} →{" "}
+                      <span className={getColor(absent, oldAbsent, true)}>
+                        {absent} {getArrow(absent, oldAbsent, true)}
+                      </span>
+                    </span>
+                  ) : absent}
                 </p>
 
               </div>
