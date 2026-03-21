@@ -163,11 +163,11 @@ export default function Attendance() {
 
                 {percentage < 75 ? (
                   <div className="text-red-600 font-bold text-sm md:text-base">
-                    Need: {required}
+                    Required: {required}
                   </div>
                 ) : (
                   <div className="text-green-600 font-bold text-sm md:text-base">
-                    Can skip: {margin}
+                    Margin: {margin}
                   </div>
                 )}
 
