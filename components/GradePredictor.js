@@ -48,17 +48,17 @@ export default function GradePredictor({ tests }) {
 
   return (
     <div className="relative" ref={ref}>
-      {/* Trigger Button */}
+      {/* 🔥 Improved Button */}
       <button
         onClick={() => setOpen(!open)}
         className="text-xs px-2 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
       >
-        Predict
+        🎯 Target
       </button>
 
-      {/* Mini Modal */}
+      {/* Popup */}
       {open && (
-        <div className="absolute right-0 mt-2 w-56 bg-white border rounded-xl shadow-lg p-3 z-10 animate-in fade-in zoom-in-95">
+        <div className="absolute right-0 mt-2 w-60 bg-white border rounded-xl shadow-lg p-3 z-10 animate-in fade-in zoom-in-95">
 
           {/* Header */}
           <div className="flex justify-between items-center mb-2">
@@ -72,6 +72,11 @@ export default function GradePredictor({ tests }) {
               ✕
             </button>
           </div>
+
+          {/* ✅ Helper Text */}
+          <p className="text-xs text-gray-500 mb-3">
+            Select a grade to see how many marks you need in remaining tests.
+          </p>
 
           {/* Grade Buttons */}
           <div className="grid grid-cols-3 gap-2 mb-3">
@@ -101,10 +106,28 @@ export default function GradePredictor({ tests }) {
                   : "bg-blue-50 text-blue-600"
               }`}
             >
-              {result.status === "possible" &&
-                `Need ${result.required} / ${result.futureMax}`}
+              {/* Possible */}
+              {result.status === "possible" && (
+                <>
+                  You need <b>{result.required}</b> out of{" "}
+                  <b>{result.futureMax}</b>
+                </>
+              )}
 
-              {result.message && result.message}
+              {/* Achieved */}
+              {result.status === "achieved" && (
+                <>
+                  You’ve already secured this grade 🎉
+                </>
+              )}
+
+              {/* Impossible */}
+              {result.status === "impossible" && (
+                <>
+                  Even with full marks, you can only reach{" "}
+                  <b>{result.message.split(": ")[1]}</b>
+                </>
+              )}
             </div>
           )}
         </div>
