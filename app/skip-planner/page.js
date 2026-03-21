@@ -21,6 +21,7 @@ export default function SkipPlannerPage() {
   const { data, setData } = useAppStore();
 
   const [showNotice, setShowNotice] = useState(false);
+  const [showTimetablePopup, setShowTimetablePopup] = useState(false);
 
   // =========================
   // 🔄 LOAD DATA
@@ -34,12 +35,22 @@ export default function SkipPlannerPage() {
   }, [data, setData, router]);
 
   // =========================
-  // 🔔 SHOW NOTICE ONCE
+  // 🔔 SKIP NOTICE (ONCE)
   // =========================
   useEffect(() => {
     const seen = localStorage.getItem("skip_notice_seen");
-    if (!seen) {
-      setShowNotice(true);
+    if (!seen) setShowNotice(true);
+  }, []);
+
+  // =========================
+  // ⚙️ TIMETABLE POPUP
+  // =========================
+  useEffect(() => {
+    const seen = localStorage.getItem("timetable_notice_seen");
+    const overrides = getOverrides();
+
+    if (!seen || (overrides && Object.keys(overrides).length > 0)) {
+      setShowTimetablePopup(true);
     }
   }, []);
 
@@ -73,9 +84,6 @@ export default function SkipPlannerPage() {
     startDate: today,
   });
 
-  // =========================
-  // 🎨 UI
-  // =========================
   return (
     <div className="p-4 md:p-6 bg-gray-100 min-h-screen">
 
@@ -84,10 +92,9 @@ export default function SkipPlannerPage() {
         Semester Skip Planner
       </h1>
 
-      {/* 🔔 NOTICE MODAL */}
+      {/* 🔔 SKIP NOTICE */}
       {showNotice && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-
           <div className="bg-white rounded-xl max-w-sm w-full p-5 shadow-lg">
 
             <h2 className="text-lg font-semibold mb-2">
@@ -99,8 +106,6 @@ export default function SkipPlannerPage() {
             </p>
 
             <div className="flex gap-2">
-
-              {/* NEVER SHOW AGAIN (LEFT) */}
               <button
                 onClick={() => {
                   localStorage.setItem("skip_notice_seen", "true");
@@ -111,18 +116,36 @@ export default function SkipPlannerPage() {
                 Don't show again
               </button>
 
-              {/* OK (RIGHT) */}
               <button
                 onClick={() => setShowNotice(false)}
                 className="flex-1 bg-black text-white py-2 rounded-md text-sm"
               >
                 OK
               </button>
-
             </div>
+
           </div>
         </div>
       )}
+
+      {/* 🔵 TIMETABLE BANNER */}
+      <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start justify-between gap-3">
+        <div className="text-sm">
+          <p className="font-medium text-blue-800">
+            ⚙️ Predictions use your timetable
+          </p>
+          <p className="text-blue-700 text-xs mt-0.5">
+            Changed any class slots or labs? Update your timetable for accurate results
+          </p>
+        </div>
+
+        <button
+          onClick={() => router.push("/timetable")}
+          className="shrink-0 bg-blue-600 text-white text-xs px-3 py-1.5 rounded-md hover:bg-blue-700"
+        >
+          Edit
+        </button>
+      </div>
 
       {/* GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -144,7 +167,6 @@ export default function SkipPlannerPage() {
           return (
             <Card key={c.id}>
 
-              {/* TITLE */}
               <h2 className="text-base md:text-lg font-semibold">
                 {c.course_title ?? "Unknown"}
               </h2>
@@ -153,29 +175,19 @@ export default function SkipPlannerPage() {
                 {c.code || "N/A"} • {c.category || "N/A"}
               </p>
 
-              {/* STATS */}
               <div className="mt-3 space-y-1 text-xs md:text-sm">
-
                 <p>
-                  <span className="text-gray-500">Current:</span>{" "}
-                  {percentage}%
+                  <span className="text-gray-500">Current:</span> {percentage}%
                 </p>
-
                 <p>
-                  <span className="text-gray-500">Remaining Classes:</span>{" "}
-                  {c.remaining}
+                  <span className="text-gray-500">Remaining Classes:</span> {c.remaining}
                 </p>
-
                 <p>
-                  <span className="text-gray-500">Projected Total:</span>{" "}
-                  {c.projectedTotal}
+                  <span className="text-gray-500">Projected Total:</span> {c.projectedTotal}
                 </p>
-
               </div>
 
-              {/* RESULT */}
               <div className="mt-4 flex justify-between items-center">
-
                 {c.safeSkips > 0 ? (
                   <div className="text-green-600 font-bold text-sm md:text-base">
                     Can Skip: {c.safeSkips}
@@ -187,10 +199,8 @@ export default function SkipPlannerPage() {
                 )}
 
                 <Badge text={status} type={type} />
-
               </div>
 
-              {/* EXTRA INFO */}
               <div className="mt-2 text-xs text-gray-500">
                 If skip all → {c.finalIfSkipAll}%
               </div>
