@@ -27,13 +27,18 @@ export default function Sidebar() {
     clearAll,
   } = useAppStore();
 
-  const links = [
+  // ✅ GROUPED LINKS
+  const mainLinks = [
     { name: "Dashboard", href: "/dashboard" },
     { name: "Attendance", href: "/attendance" },
     { name: "Marks", href: "/marks" },
-    { name: "Subjects", href: "/subjects" },
     { name: "Timetable", href: "/timetable" },
     { name: "Planner", href: "/planner" },
+  ];
+
+  const toolLinks = [
+    { name: "Course List", href: "/subjects" }, // renamed
+    { name: "Skip Planner", href: "/skip-planner" },
   ];
 
   /* ---------- OPEN FROM HEADER ---------- */
@@ -106,6 +111,32 @@ export default function Sidebar() {
     router.replace("/");
   };
 
+  // 🔁 REUSABLE LINK COMPONENT
+  const renderLink = (link) => {
+    const active = pathname === link.href;
+
+    return (
+      <Link
+        key={link.href}
+        href={link.href}
+        onClick={() => setOpen(false)}
+        className={`
+          flex items-center justify-between
+          px-3 py-2 rounded-lg text-sm font-medium
+          transition-all
+          ${
+            active
+              ? "bg-blue-500 text-white shadow-sm"
+              : "text-gray-700 hover:bg-gray-100"
+          }
+        `}
+      >
+        {link.name}
+        {active && <span className="text-xs">●</span>}
+      </Link>
+    );
+  };
+
   return (
     <>
       {/* Overlay */}
@@ -137,38 +168,33 @@ export default function Sidebar() {
         </div>
 
         {/* Links */}
-        <div className="flex flex-col gap-1 p-3 flex-1 overflow-y-auto pb-6">
-          {links.map((link) => {
-            const active = pathname === link.href;
+        <div className="flex flex-col p-3 flex-1 overflow-y-auto pb-6 space-y-4">
 
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className={`
-                  flex items-center justify-between
-                  px-3 py-2 rounded-lg text-sm font-medium
-                  transition-all
-                  ${
-                    active
-                      ? "bg-blue-500 text-white shadow-sm"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }
-                `}
-              >
-                {link.name}
+          {/* MAIN */}
+          <div>
+            <p className="text-[10px] font-semibold text-gray-400 px-2 mb-1">
+              MAIN
+            </p>
+            <div className="flex flex-col gap-1">
+              {mainLinks.map(renderLink)}
+            </div>
+          </div>
 
-                {active && <span className="text-xs">●</span>}
-              </Link>
-            );
-          })}
+          {/* TOOLS */}
+          <div>
+            <p className="text-[10px] font-semibold text-gray-400 px-2 mb-1">
+              TOOLS
+            </p>
+            <div className="flex flex-col gap-1">
+              {toolLinks.map(renderLink)}
+            </div>
+          </div>
+
         </div>
 
-        {/* Footer Actions */}
+        {/* Footer */}
         <div className="p-3 border-t space-y-2 pb-24 md:pb-3 bg-white">
 
-          {/* Refresh */}
           <button
             onClick={() => {
               setOpen(false);
@@ -180,7 +206,6 @@ export default function Sidebar() {
             {loading ? "Refreshing..." : "🔄 Refresh"}
           </button>
 
-          {/* Logout */}
           <button
             onClick={() => {
               setOpen(false);
