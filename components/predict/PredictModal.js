@@ -99,7 +99,8 @@ export default function PredictModal({ onClose, data, onApply }) {
     <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 px-3 pb-24">
 
       {/* MODAL */}
-      <div className="bg-white w-full max-w-sm rounded-xl max-h-[calc(100vh-6rem)] flex flex-col">
+      <div className="bg-white w-full max-w-sm rounded-xl max-h-[75vh] flex flex-col">
+
         {/* HEADER */}
         <div className="px-3 py-2 border-b flex justify-between items-center text-sm">
           <button
