@@ -39,8 +39,8 @@ export default function PredictModal({ onClose, data, onApply }) {
     if (index !== -1) setMonthIndex(index);
   }, []);
 
-  const toggleDate = (date, dayOrder) => {
-    if (!dayOrder || date < today) return;
+  const toggleDate = (date) => {
+    if (date < today) return;
 
     setSelectedDates((prev) =>
       prev.includes(date)
@@ -100,12 +100,12 @@ export default function PredictModal({ onClose, data, onApply }) {
     : 0;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 px-3 pb-24">
+    <div className="fixed inset-0 bg-black/40 flex justify-center items-start z-50 px-3 pt-6 pb-24">
 
       {/* WRAPPER */}
       <div className="w-full max-w-sm space-y-2">
 
-        {/* 🔵 BANNER (OUTSIDE CARD) */}
+        {/* BANNER */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 flex items-start justify-between gap-2 text-xs">
           <div>
             <p className="font-medium text-blue-800">
@@ -125,7 +125,7 @@ export default function PredictModal({ onClose, data, onApply }) {
         </div>
 
         {/* MODAL CARD */}
-        <div className="bg-white w-full rounded-xl max-h-[75vh] flex flex-col">
+        <div className="bg-white w-full rounded-xl flex flex-col shadow-lg overflow-hidden max-h-[calc(100vh-140px)]">
 
           {/* HEADER */}
           <div className="px-3 py-2 border-b flex justify-between items-center text-sm">
@@ -148,7 +148,7 @@ export default function PredictModal({ onClose, data, onApply }) {
             </button>
           </div>
 
-          {/* BODY */}
+          {/* BODY (SCROLLABLE) */}
           <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
 
             {/* CALENDAR */}
@@ -171,12 +171,23 @@ export default function PredictModal({ onClose, data, onApply }) {
                 return (
                   <button
                     key={d.date}
-                    disabled={isHoliday || isPast}
-                    onClick={() => toggleDate(d.date, d.dayOrder)}
-                    className={`p-1 rounded-md flex flex-col items-center
-                      ${isSelected ? "bg-black text-white" : ""}
-                      ${!isSelected && !isHoliday && !isPast ? "bg-gray-100" : ""}
-                      ${isHoliday || isPast ? "opacity-30" : ""}
+                    disabled={isPast}
+                    onClick={() => toggleDate(d.date)}
+                    className={`p-1 rounded-md flex flex-col items-center transition-all duration-150
+
+                      ${isSelected 
+                        ? "bg-black text-white scale-105 ring-2 ring-gray-400 shadow-sm" 
+                        : ""}
+
+                      ${!isSelected && !isPast 
+                        ? "bg-gray-100 hover:bg-gray-200" 
+                        : ""}
+
+                      ${isPast ? "opacity-30" : ""}
+
+                      ${!isSelected && isHoliday && !isPast 
+                        ? "bg-yellow-100 hover:bg-yellow-200" 
+                        : ""}
                     `}
                   >
                     <div>{d.date.split("-")[2]}</div>
@@ -239,7 +250,7 @@ export default function PredictModal({ onClose, data, onApply }) {
           </div>
 
           {/* FOOTER */}
-          <div className="p-2 border-t flex gap-2">
+          <div className="p-2 border-t flex gap-2 bg-white">
             <button
               onClick={() => {
                 onApply(result);
