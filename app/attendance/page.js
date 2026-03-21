@@ -35,8 +35,6 @@ export default function Attendance() {
   }
 
   const attendance = data?.attendance || [];
-
-  // ✅ SWITCH BETWEEN ORIGINAL & PREDICTED
   const displayAttendance = predictedData || attendance;
 
   return (
@@ -67,12 +65,6 @@ export default function Attendance() {
         </div>
       </div>
 
-      {displayAttendance.length === 0 && (
-        <div className="text-gray-500">
-          No attendance data available
-        </div>
-      )}
-
       {/* GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
@@ -81,6 +73,13 @@ export default function Attendance() {
           const absent = c.absent || 0;
           const present = total - absent;
           const percentage = Number(c.percentage) || 0;
+
+          const original = attendance.find((a) => a.id === c.id);
+
+          const oldTotal = original?.total ?? total;
+          const oldAbsent = original?.absent ?? absent;
+          const oldPresent = oldTotal - oldAbsent;
+          const oldPercentage = original?.percentage ?? percentage;
 
           const MIN = 75;
 
@@ -97,6 +96,36 @@ export default function Attendance() {
             Math.floor((present - (MIN / 100) * total) / (MIN / 100))
           );
 
+          const oldRequired =
+            oldTotal > 0
+              ? Math.max(
+                  0,
+                  Math.ceil((MIN * oldTotal - 100 * oldPresent) / (100 - MIN))
+                )
+              : 0;
+
+          const oldMargin = Math.max(
+            0,
+            Math.floor(
+              (oldPresent - (MIN / 100) * oldTotal) / (MIN / 100)
+            )
+          );
+
+          // helpers
+          const getColor = (newVal, oldVal, reverse = false) => {
+            if (!predictedData || newVal === oldVal) return "";
+            const improved = reverse ? newVal < oldVal : newVal > oldVal;
+            return improved
+              ? "text-green-600 font-semibold"
+              : "text-red-600 font-semibold";
+          };
+
+          const getArrow = (newVal, oldVal, reverse = false) => {
+            if (!predictedData || newVal === oldVal) return "";
+            const improved = reverse ? newVal < oldVal : newVal > oldVal;
+            return improved ? "↑" : "↓";
+          };
+
           let status = "Safe";
           let type = "safe";
 
@@ -108,7 +137,6 @@ export default function Attendance() {
             type = "warning";
           }
 
-          // ✅ TYPE DETECTION
           const isTheory =
             c.category === "Theory" || c.id?.includes("Theory");
 
@@ -116,40 +144,29 @@ export default function Attendance() {
             c.category === "Practical" || c.id?.includes("Practical");
 
           return (
-            <Card
-              key={c.id}
-              className={`${
-                predictedData ? "border-2 border-blue-500" : ""
-              }`}
-            >
+            <Card key={c.id}>
 
-              {/* ✅ HEADER WITH BADGE */}
+              {/* HEADER */}
               <div className="flex items-start justify-between gap-2">
-
                 <h2 className="text-base md:text-lg font-semibold">
                   {c.course_title ?? "Unknown"}
                 </h2>
 
-                {/* 🔥 BOTH BADGES */}
                 <div className="flex gap-1">
-
                   {isTheory && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 font-medium whitespace-nowrap">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
                       THEORY
                     </span>
                   )}
-
                   {isPractical && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500 text-white font-semibold whitespace-nowrap">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500 text-white">
                       PRACTICAL
                     </span>
                   )}
-
                 </div>
-
               </div>
 
-              {/* SUB INFO */}
+              {/* SUB */}
               <p className="text-xs md:text-sm text-gray-500">
                 {c.code || "N/A"} • {c.category || "N/A"}
               </p>
@@ -159,38 +176,133 @@ export default function Attendance() {
 
                 <p>
                   <span className="text-gray-500">Conducted:</span>{" "}
-                  {total}
+                  {predictedData ? (
+                    <>
+                      {oldTotal} →{" "}
+                      <span className={getColor(total, oldTotal)}>
+                        {total} {getArrow(total, oldTotal)}
+                      </span>
+                    </>
+                  ) : total}
                 </p>
 
                 <p>
                   <span className="text-gray-500">Absent:</span>{" "}
-                  {absent}
+                  {predictedData ? (
+                    <>
+                      {oldAbsent} →{" "}
+                      <span className={getColor(absent, oldAbsent, true)}>
+                        {absent} {getArrow(absent, oldAbsent, true)}
+                      </span>
+                    </>
+                  ) : absent}
                 </p>
 
                 <p>
                   <span className="text-gray-500">Attendance:</span>{" "}
-                  {percentage}%
+                  {predictedData ? (
+                    <>
+                      {oldPercentage}% →{" "}
+                      <span className={getColor(percentage, oldPercentage)}>
+                        {percentage}% {getArrow(percentage, oldPercentage)}
+                      </span>
+                    </>
+                  ) : `${percentage}%`}
                 </p>
 
                 <p>
                   <span className="text-gray-500">Present:</span>{" "}
-                  {present}
+                  {predictedData ? (
+                    <>
+                      {oldPresent} →{" "}
+                      <span className={getColor(present, oldPresent)}>
+                        {present} {getArrow(present, oldPresent)}
+                      </span>
+                    </>
+                  ) : present}
                 </p>
 
               </div>
 
-              {/* FOOTER */}
+              {/* ✅ SMART FOOTER FINAL */}
               <div className="mt-4 flex justify-between items-center">
 
-                {percentage < 75 ? (
-                  <div className="text-red-600 font-bold text-sm md:text-base">
-                    Required: {required}
-                  </div>
-                ) : (
-                  <div className="text-green-600 font-bold text-sm md:text-base">
-                    Margin: {margin}
-                  </div>
-                )}
+                {(() => {
+                  const wasSafe = oldPercentage >= 75;
+                  const isSafe = percentage >= 75;
+
+                  if (predictedData) {
+
+                    // SAFE → SAFE
+                    if (wasSafe && isSafe) {
+                      const diff = margin - oldMargin;
+                      return (
+                        <div className="text-green-600 font-bold text-sm md:text-base">
+                          Margin: {oldMargin} → {margin} {diff !== 0 && (
+                            <span>
+                              {diff > 0 ? "↑" : "↓"} ({diff > 0 ? "+" : ""}{diff})
+                            </span>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    // SAFE → DANGER
+                    if (wasSafe && !isSafe) {
+                      const diff = required - oldMargin;
+                      return (
+                        <div className="text-red-600 font-bold text-sm md:text-base">
+                          Margin: {oldMargin} → Required: {required}{" "}
+                          <span>
+                            ↓ ({diff > 0 ? "+" : ""}{diff})
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    // DANGER → SAFE
+                    if (!wasSafe && isSafe) {
+                      const diff = margin - oldRequired;
+                      return (
+                        <div className="text-green-600 font-bold text-sm md:text-base">
+                          Required: {oldRequired} → Margin: {margin}{" "}
+                          <span>
+                            ↑ ({diff > 0 ? "+" : ""}{diff})
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    // DANGER → DANGER
+                    if (!wasSafe && !isSafe) {
+                      const diff = required - oldRequired;
+                      const isBetter = diff < 0;
+
+                      return (
+                        <div className={`font-bold text-sm md:text-base ${
+                          isBetter ? "text-green-600" : "text-red-600"
+                        }`}>
+                          Required: {oldRequired} → {required}{" "}
+                          {diff !== 0 && (
+                            <span>
+                              {isBetter ? "↓" : "↑"} ({diff > 0 ? "+" : ""}{diff})
+                            </span>
+                          )}
+                        </div>
+                      );
+                    }
+                  }
+
+                  return percentage < 75 ? (
+                    <div className="text-red-600 font-bold text-sm md:text-base">
+                      Required: {required}
+                    </div>
+                  ) : (
+                    <div className="text-green-600 font-bold text-sm md:text-base">
+                      Margin: {margin}
+                    </div>
+                  );
+                })()}
 
                 <Badge text={status} type={type} />
 
