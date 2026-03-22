@@ -3,12 +3,7 @@
 import { useState, useEffect } from "react";
 import { loginUser } from "@/lib/api";
 import { useAppStore } from "@/store/useAppStore";
-import {
-  saveSession,
-  saveData,
-  getSession,
-  getData,
-} from "@/lib/storage";
+import { saveData, getData } from "@/lib/storage";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -16,8 +11,6 @@ export default function LoginPage() {
 
   const {
     setData,
-    setSession,
-    setCredentials,
     setLoading,
     setError,
     loading,
@@ -28,16 +21,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [checking, setChecking] = useState(true);
 
+  // =========================
+  // 🔄 AUTO LOGIN CHECK
+  // =========================
   useEffect(() => {
     const savedData = getData();
-    const session = getSession();
+    const session_id = localStorage.getItem("session_id");
 
-    const isValidSession =
-      session && Object.keys(session).length > 0;
-
-    if (savedData && isValidSession) {
+    if (savedData && session_id) {
       setData(savedData);
-      setSession(session);
 
       setTimeout(() => {
         router.replace("/dashboard");
@@ -45,8 +37,11 @@ export default function LoginPage() {
     } else {
       setChecking(false);
     }
-  }, [setData, setSession, router]);
+  }, [setData, router]);
 
+  // =========================
+  // 🔐 LOGIN HANDLER
+  // =========================
   const handleLogin = async () => {
     if (!email?.trim() || !password?.trim()) {
       setError("Please enter email and password");
@@ -57,7 +52,7 @@ export default function LoginPage() {
       setLoading(true);
       setError(null);
 
-      // 🔥 FORMAT EMAIL (INTERNAL ONLY)
+      // 🔥 FORMAT EMAIL
       let formattedEmail = email.trim().toLowerCase();
 
       if (!formattedEmail.includes("@")) {
@@ -69,28 +64,28 @@ export default function LoginPage() {
           formattedEmail.split("@")[0] + "@srmist.edu.in";
       }
 
-      const session = getSession();
-
-      const res = await loginUser(
-        formattedEmail,
+      // =========================
+      // 🔥 CALL NEW API
+      // =========================
+      const res = await loginUser({
+        email: formattedEmail,
         password,
-        session
-      );
+      });
 
       if (!res || !res.success) {
         throw new Error("Authentication failed");
       }
 
+      // =========================
+      // ✅ STORE DATA
+      // =========================
       setData(res.data);
-
-      if (res.session && Object.keys(res.session).length > 0) {
-        setSession(res.session);
-        saveSession(res.session);
-      }
-
-      // ✅ Store correct email internally
-      setCredentials({ email: formattedEmail, password });
       saveData(res.data);
+
+      // 🔥 NEW: STORE SESSION ID
+      if (res.session_id) {
+        localStorage.setItem("session_id", res.session_id);
+      }
 
       router.replace("/dashboard");
 
@@ -101,12 +96,18 @@ export default function LoginPage() {
     }
   };
 
+  // =========================
+  // ⌨️ ENTER KEY SUPPORT
+  // =========================
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !loading) {
       handleLogin();
     }
   };
 
+  // =========================
+  // ⏳ LOADING SCREEN
+  // =========================
   if (checking) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -115,6 +116,9 @@ export default function LoginPage() {
     );
   }
 
+  // =========================
+  // 🎨 UI
+  // =========================
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
 

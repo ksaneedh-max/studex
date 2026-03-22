@@ -51,10 +51,11 @@ export default function Timetable() {
     saveOverrides(overrides);
   }, [overrides]);
 
-  if (!data) return <div className="p-6">Loading...</div>;
-
-  const subjects = data.subjects || [];
-  const batch = data.batch || "1";
+  // =========================
+  // 🔥 SAFE FALLBACK VALUES (IMPORTANT FIX)
+  // =========================
+  const subjects = data?.subjects || [];
+  const batch = data?.batch || "1";
 
   const timetable =
     batch === "1" ? timetableData.batch1 : timetableData.batch2;
@@ -72,9 +73,11 @@ export default function Timetable() {
   const nextClass = getNextClassInfo();
 
   // =========================
-  // ✅ FIXED DAY ORDER
+  // ✅ FIXED DAY ORDER (SAFE)
   // =========================
   const days = useMemo(() => {
+    if (!timetable) return [];
+
     return ["Day1", "Day2", "Day3", "Day4", "Day5"]
       .map((key) => [key, timetable[key]])
       .filter(([_, val]) => val);
@@ -88,7 +91,7 @@ export default function Timetable() {
   }, [todayKey, days]);
 
   // =========================
-  // ✅ SUBJECT MATCHING FIX
+  // ✅ SUBJECT MATCHING
   // =========================
   const findSubject = (slotValue) => {
     if (!slotValue) return null;
@@ -185,6 +188,13 @@ export default function Timetable() {
   };
 
   // =========================
+  // 🚨 SAFE RETURN AFTER HOOKS (CRITICAL FIX)
+  // =========================
+  if (!data) {
+    return <div className="p-6">Loading...</div>;
+  }
+
+  // =========================
   // 🚀 UI
   // =========================
   return (
@@ -233,10 +243,7 @@ export default function Timetable() {
         </div>
       </div>
 
-      {/* ✅ ALWAYS SHOW TIMETABLE */}
       <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-
-        {/* ✅ HOLIDAY MESSAGE */}
         {!todayKey && (
           <Card className="mb-4">
             <p className="text-gray-500 text-center">

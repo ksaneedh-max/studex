@@ -5,9 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import {
   getData,
-  getSession,
   getLastFetch,
-  saveSession,
   saveData,
 } from "@/lib/storage";
 import { loginUser } from "@/lib/api";
@@ -18,68 +16,69 @@ export default function AuthProvider({ children }) {
 
   const {
     setData,
-    setSession,
-    credentials, // 🔥 needed for auto refresh
+    setLoading,
   } = useAppStore();
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setPageLoading] = useState(true);
 
   useEffect(() => {
     const savedData = getData();
-    const session = getSession();
+    const session_id = localStorage.getItem("session_id");
     const lastFetch = getLastFetch();
 
-    const isValidSession =
-      session && Object.keys(session).length > 0;
+    const isLoggedIn = savedData && session_id;
 
-    const isLoggedIn = savedData && isValidSession;
-
-    // 🔹 Restore store
+    // =========================
+    // 🔹 Restore state
+    // =========================
     if (isLoggedIn) {
       setData(savedData);
-      setSession(session);
 
-      // 🔥 AUTO REFRESH LOGIC
+      // 🔥 AUTO REFRESH (session_id based)
       const now = Date.now();
       const isStale =
-        !lastFetch || now - lastFetch > 3 * 60 * 1000; // 3 mins
+        !lastFetch || now - lastFetch > 2 * 60 * 1000; // 2 mins
 
-      if (
-        isStale &&
-        credentials?.email &&
-        credentials?.password
-      ) {
-        // 🔄 silent background refresh
+      if (isStale) {
         (async () => {
           try {
-            const res = await loginUser(
-              credentials.email,
-              credentials.password,
-              session
-            );
+            setLoading(true);
 
-            if (res?.success) {
-              setData(res.data);
+            const res = await loginUser({ session_id });
 
-              if (
-                res.session &&
-                Object.keys(res.session).length > 0
-              ) {
-                setSession(res.session);
-                saveSession(res.session);
-              }
-
-              saveData(res.data);
+            if (!res || !res.success) {
+              throw new Error("Session expired");
             }
+
+            // 🔥 NEW: CONSOLE MESSAGE
+            if (res?.meta?.relogin) {
+              console.log("🔐 Auto: Re-logged in (session expired)");
+            } else {
+              console.log("🔄 Auto: Session reused");
+            }
+
+            setData(res.data);
+            saveData(res.data);
+
           } catch {
-            // ❌ silent fail (do not disturb user)
+            // 🔥 if refresh fails → logout
+            console.log("❌ Auto refresh failed → logging out");
+
+            localStorage.removeItem("session_id");
+            router.replace("/");
+          } finally {
+            setLoading(false);
           }
         })();
       }
     }
 
+    // =========================
     // 🔥 ROUTE CONTROL
-    if (!isLoggedIn && pathname !== "/") {
+    // =========================
+    const isApiRoute = pathname.startsWith("/api");
+
+    if (!isLoggedIn && pathname !== "/" && !isApiRoute) {
       router.replace("/");
     }
 
@@ -87,8 +86,8 @@ export default function AuthProvider({ children }) {
       router.replace("/dashboard");
     }
 
-    setLoading(false);
-  }, [pathname, router, setData, setSession, credentials]);
+    setPageLoading(false);
+  }, [pathname, router, setData, setLoading]);
 
   if (loading) {
     return (

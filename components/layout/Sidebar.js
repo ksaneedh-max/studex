@@ -6,8 +6,6 @@ import { useAppStore } from "@/store/useAppStore";
 import { loginUser } from "@/lib/api";
 import {
   saveData,
-  saveSession,
-  getSession,
   clearStorage,
 } from "@/lib/storage";
 import { useState, useEffect } from "react";
@@ -17,12 +15,10 @@ export default function Sidebar() {
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false); // ✅ NEW
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const {
     setData,
-    setSession,
-    credentials,
     setLoading,
     loading,
     clearAll,
@@ -56,7 +52,9 @@ export default function Sidebar() {
   /* ---------- REFRESH ---------- */
   const handleRefresh = async () => {
     try {
-      if (!credentials?.email || !credentials?.password) {
+      const session_id = localStorage.getItem("session_id");
+
+      if (!session_id) {
         alert("Session expired. Please login again.");
         handleLogout();
         return;
@@ -64,38 +62,21 @@ export default function Sidebar() {
 
       setLoading(true);
 
-      const session = getSession();
-
-      let res;
-
-      try {
-        res = await loginUser(
-          credentials.email,
-          credentials.password,
-          session
-        );
-      } catch {
-        try {
-          res = await loginUser(
-            credentials.email,
-            credentials.password
-          );
-        } catch {
-          throw new Error("Refresh failed");
-        }
-      }
+      const res = await loginUser({ session_id });
 
       if (!res || !res.success) {
         throw new Error("Refresh failed");
       }
 
+      // 🔥 NEW: LOG SESSION BEHAVIOR
+      if (res?.meta?.relogin) {
+        console.log("🔐 Re-logged in (session expired)");
+      } else {
+        console.log("🔄 Session refreshed (reused)");
+      }
+
       setData(res.data);
       saveData(res.data);
-
-      if (res.session && Object.keys(res.session).length > 0) {
-        setSession(res.session);
-        saveSession(res.session);
-      }
 
       router.refresh();
     } catch {
@@ -109,21 +90,23 @@ export default function Sidebar() {
   /* ---------- LOGOUT ---------- */
   const handleLogout = async () => {
     try {
-      const session = getSession();
+      const session_id = localStorage.getItem("session_id");
 
-      if (session) {
-        await fetch("https://rev-api-yoxt.onrender.com/logout", {
+      if (session_id) {
+        await fetch("/api/logout", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ session_data: session }),
+          body: JSON.stringify({ session_id }),
         });
       }
     } catch {}
 
     clearAll();
     clearStorage();
+    localStorage.removeItem("session_id");
+
     router.replace("/");
   };
 
@@ -154,7 +137,7 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Sidebar Overlay */}
+      {/* Overlay */}
       {open && (
         <div
           onClick={() => setOpen(false)}
@@ -197,7 +180,7 @@ export default function Sidebar() {
           </button>
 
           <button
-            onClick={() => setShowLogoutConfirm(true)} // ✅ trigger modal
+            onClick={() => setShowLogoutConfirm(true)}
             className="w-full bg-red-500 text-white py-2 rounded"
           >
             🚪 Logout
@@ -205,7 +188,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* 🔥 LOGOUT CONFIRM MODAL */}
+      {/* Logout Modal */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-[90%] max-w-sm shadow-lg text-center space-y-4">

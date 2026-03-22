@@ -1,4 +1,6 @@
 import { normalizeData } from "@/lib/normalize";
+import { redis } from "@/lib/redis";
+import { nanoid } from "nanoid";
 
 export async function POST(req) {
   try {
@@ -13,25 +15,54 @@ export async function POST(req) {
       });
     }
 
-    const { email, password, session_data } = body || {};
+    // 🔥 include session_id
+    const { email, password, session_data, session_id } = body || {};
+
+    // =========================
+    // 🔥 STEP 1: GET CREDS FROM REDIS
+    // =========================
+    let creds = null;
+
+    if (session_id) {
+      creds = await redis.get(session_id);
+
+      if (!creds) {
+        return Response.json({
+          success: false,
+          message: "Session expired. Please login again.",
+        });
+      }
+    }
+
+    // =========================
+    // 🔥 STEP 2: RESOLVE FINAL VALUES
+    // =========================
+    const finalEmail = email || creds?.email;
+    const finalPassword = password || creds?.password;
+    const finalSession = session_data || creds?.session_data;
 
     // 🔍 Validation
-    if (!email || !password) {
+    if (!finalEmail || !finalPassword) {
       return Response.json({
         success: false,
         message: "Email and password are required",
       });
     }
 
+    // 🔥 STORE PREVIOUS DIGEST
+    const previousDigest = finalSession?.digest || null;
+
+    // =========================
     // 🔹 Helper to call external API
+    // =========================
     const callAPI = async (useSession = true) => {
       const requestBody = {
-        email,
-        password,
+        email: finalEmail,
+        password: finalPassword,
         ...(useSession &&
-          session_data &&
-          Object.keys(session_data).length > 0 && {
-            session_data,
+          finalSession &&
+          Object.keys(finalSession).length > 0 && {
+            session_data: finalSession,
           }),
       };
 
@@ -53,12 +84,11 @@ export async function POST(req) {
         throw new Error("Invalid response from external server");
       }
 
-      // 🔥 IMPORTANT: forward real backend errors
       if (!res.ok || data?.detail) {
         throw new Error(
           data?.detail ||
-          data?.message ||
-          "Invalid email or password"
+            data?.message ||
+            "Invalid email or password"
         );
       }
 
@@ -68,7 +98,9 @@ export async function POST(req) {
     let data;
     let reused = false;
 
-    // 🔹 STEP 1: Try session reuse
+    // =========================
+    // 🔹 STEP 3: Try session reuse
+    // =========================
     try {
       data = await callAPI(true);
       reused = true;
@@ -76,7 +108,9 @@ export async function POST(req) {
       data = null;
     }
 
-    // 🔹 STEP 2: Fallback to fresh login
+    // =========================
+    // 🔹 STEP 4: Fallback login
+    // =========================
     if (!data) {
       try {
         data = await callAPI(false);
@@ -85,8 +119,7 @@ export async function POST(req) {
         return Response.json({
           success: false,
           message:
-            err.message ||
-            "Invalid email or password",
+            err.message || "Invalid email or password",
         });
       }
     }
@@ -98,6 +131,16 @@ export async function POST(req) {
         message: "Login failed",
       });
     }
+
+    // =========================
+    // 🔥 RELLOGIN DETECTION
+    // =========================
+    const newDigest = data?.session_data?.digest || null;
+
+    const relogin =
+      previousDigest &&
+      newDigest &&
+      previousDigest !== newDigest;
 
     // =========================
     // 🔥 NORMALIZE DATA
@@ -116,14 +159,40 @@ export async function POST(req) {
     }
 
     // =========================
+    // 🔥 STEP 5: OPTIMIZED REDIS STORAGE
+    // =========================
+    const newSessionId = session_id || nanoid();
+
+    const shouldWrite = relogin || !session_id;
+
+    if (shouldWrite) {
+      // ✅ Write only when needed
+      await redis.set(
+        newSessionId,
+        {
+          email: finalEmail,
+          password: finalPassword,
+          session_data: data.session_data,
+        },
+        {
+          ex: 60 * 60 * 24, // 1 day TTL
+        }
+      );
+    } else {
+      // 🔥 Refresh TTL without rewriting
+      await redis.expire(newSessionId, 60 * 60 * 24);
+    }
+
+    // =========================
     // ✅ FINAL RESPONSE
     // =========================
     return Response.json({
       success: true,
       data: normalized,
-      session: data.session_data || null,
+      session_id: newSessionId,
       meta: {
         reused,
+        relogin,
       },
     });
 
