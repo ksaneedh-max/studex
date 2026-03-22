@@ -20,7 +20,8 @@ export default function PeriodCard({
     if (override === "") {
       finalSubject = null;
     } else {
-      finalSubject = subjects.find((s) => s.course_code === override) || null;
+      finalSubject =
+        subjects.find((s) => s.course_code === override) || null;
     }
   } else {
     finalSubject = subject || null;
@@ -77,8 +78,9 @@ export default function PeriodCard({
         >
           <option value="">Free</option>
 
-          {subjects.map((s) => (
-            <option key={s.course_code} value={s.course_code}>
+          {/* ✅ FIXED: unique keys */}
+          {subjects.map((s, i) => (
+            <option key={`${s.course_code}-${i}`} value={s.course_code}>
               {s.course_title}
             </option>
           ))}

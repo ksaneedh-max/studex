@@ -14,6 +14,9 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
+  // ✅ 🔥 FIX: Hide sidebar on login page
+  if (pathname === "/") return null;
+
   const [open, setOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -68,7 +71,6 @@ export default function Sidebar() {
         throw new Error("Refresh failed");
       }
 
-      // 🔥 NEW: LOG SESSION BEHAVIOR
       if (res?.meta?.relogin) {
         console.log("🔐 Re-logged in (session expired)");
       } else {
@@ -146,8 +148,11 @@ export default function Sidebar() {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed md:static top-0 left-0 h-full w-64 bg-white border-r flex flex-col z-50 transform transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}>
-
+      <div
+        className={`fixed md:static top-0 left-0 h-full w-64 bg-white border-r flex flex-col z-50 transform transition-transform duration-300 ${
+          open ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0`}
+      >
         {/* Header */}
         <div className="p-4 border-b">
           <h2 className="text-lg font-bold tracking-tight">
@@ -170,7 +175,6 @@ export default function Sidebar() {
 
         {/* Footer */}
         <div className="p-3 border-t space-y-2 pb-20 md:pb-3 bg-white">
-
           <button
             onClick={handleRefresh}
             disabled={loading}
@@ -192,7 +196,6 @@ export default function Sidebar() {
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-[90%] max-w-sm shadow-lg text-center space-y-4">
-
             <h2 className="text-lg font-semibold">
               Confirm Logout
             </h2>
@@ -202,7 +205,6 @@ export default function Sidebar() {
             </p>
 
             <div className="flex gap-3 justify-center">
-
               <button
                 onClick={() => setShowLogoutConfirm(false)}
                 className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
@@ -219,7 +221,6 @@ export default function Sidebar() {
               >
                 Logout
               </button>
-
             </div>
           </div>
         </div>

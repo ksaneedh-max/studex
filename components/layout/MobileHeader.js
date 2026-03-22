@@ -1,6 +1,11 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+
 export default function MobileHeader() {
+  const pathname = usePathname();
+  const isLoginPage = pathname === "/";
+
   return (
     <div
       className="
@@ -13,15 +18,17 @@ export default function MobileHeader() {
         border-b
       "
     >
-      {/* Hamburger */}
-      <button
-        onClick={() =>
-          document.dispatchEvent(new Event("toggle-sidebar"))
-        }
-        className="p-2 rounded bg-gray-100"
-      >
-        ☰
-      </button>
+      {/* Hamburger (hidden on login) */}
+      {!isLoginPage && (
+        <button
+          onClick={() =>
+            document.dispatchEvent(new Event("toggle-sidebar"))
+          }
+          className="p-2 rounded bg-gray-100"
+        >
+          ☰
+        </button>
+      )}
 
       {/* Title */}
       <h1 className="font-bold tracking-tight text-lg">
