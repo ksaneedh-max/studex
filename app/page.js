@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { loginUser } from "@/lib/api";
-import { normalizeData } from "@/lib/normalize";
 import { useAppStore } from "@/store/useAppStore";
 import {
   saveSession,
@@ -33,7 +32,10 @@ export default function LoginPage() {
     const savedData = getData();
     const session = getSession();
 
-    if (savedData && session) {
+    const isValidSession =
+      session && Object.keys(session).length > 0;
+
+    if (savedData && isValidSession) {
       setData(savedData);
       setSession(session);
 
@@ -55,24 +57,43 @@ export default function LoginPage() {
       setLoading(true);
       setError(null);
 
-      const session = getSession() || {};
+      // 🔥 FORMAT EMAIL (INTERNAL ONLY)
+      let formattedEmail = email.trim().toLowerCase();
 
-      const raw = await loginUser(email.trim(), password, session);
+      if (!formattedEmail.includes("@")) {
+        formattedEmail = `${formattedEmail}@srmist.edu.in`;
+      }
 
-      if (!raw || raw.status !== "success") {
+      if (!formattedEmail.endsWith("@srmist.edu.in")) {
+        formattedEmail =
+          formattedEmail.split("@")[0] + "@srmist.edu.in";
+      }
+
+      const session = getSession();
+
+      const res = await loginUser(
+        formattedEmail,
+        password,
+        session
+      );
+
+      if (!res || !res.success) {
         throw new Error("Authentication failed");
       }
 
-      const normalized = normalizeData(raw);
+      setData(res.data);
 
-      setData(normalized);
-      setSession(raw.session_data || {});
-      setCredentials({ email: email.trim(), password });
+      if (res.session && Object.keys(res.session).length > 0) {
+        setSession(res.session);
+        saveSession(res.session);
+      }
 
-      saveSession(raw.session_data || {});
-      saveData(normalized);
+      // ✅ Store correct email internally
+      setCredentials({ email: formattedEmail, password });
+      saveData(res.data);
 
       router.replace("/dashboard");
+
     } catch (err) {
       setError(err.message || "Login failed");
     } finally {

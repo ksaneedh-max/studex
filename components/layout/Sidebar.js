@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { loginUser } from "@/lib/api";
-import { normalizeData } from "@/lib/normalize";
 import {
   saveData,
   saveSession,
   getSession,
+  clearStorage,
 } from "@/lib/storage";
 import { useState, useEffect } from "react";
 
@@ -17,6 +17,7 @@ export default function Sidebar() {
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false); // ✅ NEW
 
   const {
     setData,
@@ -27,7 +28,6 @@ export default function Sidebar() {
     clearAll,
   } = useAppStore();
 
-  // ✅ GROUPED LINKS
   const mainLinks = [
     { name: "Dashboard", href: "/dashboard" },
     { name: "Attendance", href: "/attendance" },
@@ -37,11 +37,10 @@ export default function Sidebar() {
   ];
 
   const toolLinks = [
-    { name: "Course List", href: "/subjects" }, // renamed
+    { name: "Course List", href: "/subjects" },
     { name: "Skip Planner", href: "/skip-planner" },
   ];
 
-  /* ---------- OPEN FROM HEADER ---------- */
   useEffect(() => {
     const openSidebar = () => setOpen(true);
     document.addEventListener("toggle-sidebar", openSidebar);
@@ -50,7 +49,6 @@ export default function Sidebar() {
     };
   }, []);
 
-  /* ---------- CLOSE ON ROUTE ---------- */
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
@@ -60,39 +58,49 @@ export default function Sidebar() {
     try {
       if (!credentials?.email || !credentials?.password) {
         alert("Session expired. Please login again.");
-        clearAll();
-        localStorage.clear();
-        router.replace("/");
+        handleLogout();
         return;
       }
 
       setLoading(true);
 
-      const session = getSession() || {};
+      const session = getSession();
 
-      const raw = await loginUser(
-        credentials.email,
-        credentials.password,
-        session
-      );
+      let res;
 
-      if (!raw || raw.status !== "success") {
+      try {
+        res = await loginUser(
+          credentials.email,
+          credentials.password,
+          session
+        );
+      } catch {
+        try {
+          res = await loginUser(
+            credentials.email,
+            credentials.password
+          );
+        } catch {
+          throw new Error("Refresh failed");
+        }
+      }
+
+      if (!res || !res.success) {
         throw new Error("Refresh failed");
       }
 
-      const normalized = normalizeData(raw);
+      setData(res.data);
+      saveData(res.data);
 
-      setData(normalized);
-      setSession(raw.session_data || {});
-      saveSession(raw.session_data || {});
-      saveData(normalized);
+      if (res.session && Object.keys(res.session).length > 0) {
+        setSession(res.session);
+        saveSession(res.session);
+      }
 
       router.refresh();
     } catch {
       alert("Session expired. Please login again.");
-      clearAll();
-      localStorage.clear();
-      router.replace("/");
+      handleLogout();
     } finally {
       setLoading(false);
     }
@@ -101,17 +109,24 @@ export default function Sidebar() {
   /* ---------- LOGOUT ---------- */
   const handleLogout = async () => {
     try {
-      await fetch("https://rev-api-yoxt.onrender.com/logout", {
-        method: "POST",
-      });
+      const session = getSession();
+
+      if (session) {
+        await fetch("https://rev-api-yoxt.onrender.com/logout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ session_data: session }),
+        });
+      }
     } catch {}
 
     clearAll();
-    localStorage.clear();
+    clearStorage();
     router.replace("/");
   };
 
-  // 🔁 REUSABLE LINK COMPONENT
   const renderLink = (link) => {
     const active = pathname === link.href;
 
@@ -139,7 +154,7 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Overlay */}
+      {/* Sidebar Overlay */}
       {open && (
         <div
           onClick={() => setOpen(false)}
@@ -148,76 +163,84 @@ export default function Sidebar() {
       )}
 
       {/* Sidebar */}
-      <div
-        className={`
-          fixed md:static top-0 left-0 h-full w-64 bg-white border-r
-          flex flex-col z-50
-          transform transition-transform duration-300
-          ${open ? "translate-x-0" : "-translate-x-full"}
-          md:translate-x-0
-        `}
-      >
+      <div className={`fixed md:static top-0 left-0 h-full w-64 bg-white border-r flex flex-col z-50 transform transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}>
+
         {/* Header */}
         <div className="p-4 border-b">
           <h2 className="text-lg font-bold tracking-tight">
             Academia DeX
           </h2>
-          <p className="text-xs text-gray-500">
-            Navigation
-          </p>
         </div>
 
         {/* Links */}
-        <div className="flex flex-col p-3 flex-1 overflow-y-auto pb-6 space-y-4">
-
-          {/* MAIN */}
+        <div className="flex flex-col p-3 flex-1 space-y-4">
           <div>
-            <p className="text-[10px] font-semibold text-gray-400 px-2 mb-1">
-              MAIN
-            </p>
-            <div className="flex flex-col gap-1">
-              {mainLinks.map(renderLink)}
-            </div>
+            <p className="text-xs text-gray-400 mb-1">MAIN</p>
+            {mainLinks.map(renderLink)}
           </div>
 
-          {/* TOOLS */}
           <div>
-            <p className="text-[10px] font-semibold text-gray-400 px-2 mb-1">
-              TOOLS
-            </p>
-            <div className="flex flex-col gap-1">
-              {toolLinks.map(renderLink)}
-            </div>
+            <p className="text-xs text-gray-400 mb-1">TOOLS</p>
+            {toolLinks.map(renderLink)}
           </div>
-
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t space-y-2 pb-24 md:pb-3 bg-white">
+        <div className="p-3 border-t space-y-2">
 
           <button
-            onClick={() => {
-              setOpen(false);
-              handleRefresh();
-            }}
+            onClick={handleRefresh}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-green-500 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition disabled:opacity-50"
+            className="w-full bg-green-500 text-white py-2 rounded"
           >
             {loading ? "Refreshing..." : "🔄 Refresh"}
           </button>
 
           <button
-            onClick={() => {
-              setOpen(false);
-              handleLogout();
-            }}
-            className="w-full flex items-center justify-center gap-2 bg-red-500 text-white py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition"
+            onClick={() => setShowLogoutConfirm(true)} // ✅ trigger modal
+            className="w-full bg-red-500 text-white py-2 rounded"
           >
             🚪 Logout
           </button>
-
         </div>
       </div>
+
+      {/* 🔥 LOGOUT CONFIRM MODAL */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-[90%] max-w-sm shadow-lg text-center space-y-4">
+
+            <h2 className="text-lg font-semibold">
+              Confirm Logout
+            </h2>
+
+            <p className="text-sm text-gray-500">
+              Are you sure you want to logout?
+            </p>
+
+            <div className="flex gap-3 justify-center">
+
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  handleLogout();
+                }}
+                className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"
+              >
+                Logout
+              </button>
+
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

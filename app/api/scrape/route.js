@@ -9,7 +9,7 @@ export async function POST(req) {
     } catch {
       return Response.json({
         success: false,
-        message: "Invalid JSON body",
+        message: "Invalid request body",
       });
     }
 
@@ -23,49 +23,84 @@ export async function POST(req) {
       });
     }
 
-    // 🌐 Call external API
-    const res = await fetch("https://rev-api-yoxt.onrender.com/scrape", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    // 🔹 Helper to call external API
+    const callAPI = async (useSession = true) => {
+      const requestBody = {
         email,
         password,
-        session_data: session_data || {},
-      }),
-    });
+        ...(useSession &&
+          session_data &&
+          Object.keys(session_data).length > 0 && {
+            session_data,
+          }),
+      };
 
-    // 🔍 Handle non-200 responses
-    if (!res.ok) {
-      return Response.json({
-        success: false,
-        message: "External API failed",
-        status: res.status,
-      });
-    }
+      const res = await fetch(
+        "https://rev-api-yoxt.onrender.com/scrape",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Invalid response from external server");
+      }
+
+      // 🔥 IMPORTANT: forward real backend errors
+      if (!res.ok || data?.detail) {
+        throw new Error(
+          data?.detail ||
+          data?.message ||
+          "Invalid email or password"
+        );
+      }
+
+      return data;
+    };
 
     let data;
+    let reused = false;
+
+    // 🔹 STEP 1: Try session reuse
     try {
-      data = await res.json();
+      data = await callAPI(true);
+      reused = true;
     } catch {
-      return Response.json({
-        success: false,
-        message: "Invalid response from external API",
-      });
+      data = null;
     }
 
-    // 🔍 Validate API response
-    if (!data || data.status !== "success") {
+    // 🔹 STEP 2: Fallback to fresh login
+    if (!data) {
+      try {
+        data = await callAPI(false);
+        reused = false;
+      } catch (err) {
+        return Response.json({
+          success: false,
+          message:
+            err.message ||
+            "Invalid email or password",
+        });
+      }
+    }
+
+    // 🔍 Final validation
+    if (!data) {
       return Response.json({
         success: false,
-        message: data?.message || "Login failed",
-        raw: data,
+        message: "Login failed",
       });
     }
 
     // =========================
-    // 🔥 NORMALIZE DATA HERE
+    // 🔥 NORMALIZE DATA
     // =========================
     let normalized;
     try {
@@ -75,9 +110,8 @@ export async function POST(req) {
 
       return Response.json({
         success: false,
-        message: "Normalization failed",
+        message: "Data processing failed",
         error: err.message,
-        raw: data, // helpful for debugging
       });
     }
 
@@ -86,8 +120,11 @@ export async function POST(req) {
     // =========================
     return Response.json({
       success: true,
-      data: normalized,   // ✅ cleaned data for frontend
-      raw: data,          // ⚠️ optional (remove in production if needed)
+      data: normalized,
+      session: data.session_data || null,
+      meta: {
+        reused,
+      },
     });
 
   } catch (error) {
@@ -95,7 +132,7 @@ export async function POST(req) {
 
     return Response.json({
       success: false,
-      message: "Server error",
+      message: "Server error. Please try again.",
       error: error.message,
     });
   }
