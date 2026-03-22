@@ -15,7 +15,6 @@ export async function POST(req) {
       });
     }
 
-    // 🔥 include session_id
     const { email, password, session_data, session_id } = body || {};
 
     // =========================
@@ -41,7 +40,6 @@ export async function POST(req) {
     const finalPassword = password || creds?.password;
     const finalSession = session_data || creds?.session_data;
 
-    // 🔍 Validation
     if (!finalEmail || !finalPassword) {
       return Response.json({
         success: false,
@@ -49,7 +47,6 @@ export async function POST(req) {
       });
     }
 
-    // 🔥 STORE PREVIOUS DIGEST
     const previousDigest = finalSession?.digest || null;
 
     // =========================
@@ -70,9 +67,7 @@ export async function POST(req) {
         "https://rev-api-yoxt.onrender.com/scrape",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody),
         }
       );
@@ -87,8 +82,8 @@ export async function POST(req) {
       if (!res.ok || data?.detail) {
         throw new Error(
           data?.detail ||
-            data?.message ||
-            "Invalid email or password"
+          data?.message ||
+          "Invalid email or password"
         );
       }
 
@@ -118,13 +113,11 @@ export async function POST(req) {
       } catch (err) {
         return Response.json({
           success: false,
-          message:
-            err.message || "Invalid email or password",
+          message: err.message || "Invalid email or password",
         });
       }
     }
 
-    // 🔍 Final validation
     if (!data) {
       return Response.json({
         success: false,
@@ -159,14 +152,14 @@ export async function POST(req) {
     }
 
     // =========================
-    // 🔥 STEP 5: OPTIMIZED REDIS STORAGE
+    // 🔥 STEP 5: SESSION STORAGE
     // =========================
     const newSessionId = session_id || nanoid();
+    const TTL = 60 * 60 * 24; // 24h
 
     const shouldWrite = relogin || !session_id;
 
     if (shouldWrite) {
-      // ✅ Write only when needed
       await redis.set(
         newSessionId,
         {
@@ -174,13 +167,33 @@ export async function POST(req) {
           password: finalPassword,
           session_data: data.session_data,
         },
-        {
-          ex: 60 * 60 * 24, // 1 day TTL
-        }
+        { ex: TTL }
       );
+
+      console.log("💾 Session stored");
     } else {
-      // 🔥 Refresh TTL without rewriting
-      await redis.expire(newSessionId, 60 * 60 * 24);
+      console.log("♻️ Session reused");
+    }
+
+    // =========================
+    // 🔥 STEP 6: OPTIMIZED ANALYTICS (NEW)
+    // =========================
+
+    // 🔹 10-min limiter
+    const trackKey = `track:${newSessionId}`;
+    const alreadyTracked = await redis.get(trackKey);
+
+    if (!alreadyTracked) {
+      await redis.set(trackKey, "1", { ex: 600 }); // 10 minutes
+
+      const now = new Date();
+      const date = now.toISOString().slice(0, 10);
+      const hour = now.getHours();
+
+      const key = `stats:hourly:${date}:${hour}`;
+
+      // 🔥 ONLY 1 WRITE
+      await redis.incr(key);
     }
 
     // =========================
