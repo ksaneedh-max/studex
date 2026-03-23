@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home,
@@ -10,8 +9,13 @@ import {
   Calendar,
 } from "lucide-react";
 
+import { useTimetableLogic } from "@/app/hooks/useTimetable";
+
 export default function BottomNav() {
   const pathname = usePathname();
+
+  // 🔥 IMPORTANT: use safe navigation
+  const { safePush } = useTimetableLogic();
 
   const items = [
     {
@@ -44,11 +48,8 @@ export default function BottomNav() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
-
       <div className="bg-white border-t shadow-sm">
-
         <div className="relative grid grid-cols-5 items-center">
-
           {items.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
@@ -56,9 +57,9 @@ export default function BottomNav() {
             // 🌟 CENTER BUTTON
             if (item.center) {
               return (
-                <Link
+                <button
                   key={item.href}
-                  href={item.href}
+                  onClick={() => safePush(item.href)}
                   className="flex justify-center"
                 >
                   <div
@@ -75,23 +76,21 @@ export default function BottomNav() {
                   >
                     <Icon size={20} />
                   </div>
-                </Link>
+                </button>
               );
             }
 
             // 📱 NORMAL ITEMS
             return (
-              <Link
+              <button
                 key={item.href}
-                href={item.href}
+                onClick={() => safePush(item.href)}
                 className="tap flex flex-col items-center justify-center py-2 text-xs relative"
               >
                 <Icon
                   size={18}
                   className={`transition ${
-                    active
-                      ? "text-black"
-                      : "text-gray-400"
+                    active ? "text-black" : "text-gray-400"
                   }`}
                 />
 
@@ -109,13 +108,11 @@ export default function BottomNav() {
                 {active && !item.center && (
                   <span className="absolute bottom-1 w-1 h-1 bg-black rounded-full" />
                 )}
-              </Link>
+              </button>
             );
           })}
-
         </div>
       </div>
-
     </div>
   );
 }

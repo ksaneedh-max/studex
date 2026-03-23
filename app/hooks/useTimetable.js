@@ -104,33 +104,29 @@ export function useTimetableLogic() {
   }, []);
 
   // =========================
-  // 🔥 SAVE OVERRIDES
+  // 💾 SAVE (ONLY WHEN DONE)
   // =========================
-  useEffect(() => {
+  const saveOverrides = async () => {
     setLocalOverrides(overrides);
 
     const session_id = localStorage.getItem("session_id");
     if (!session_id) return;
 
-    const timeout = setTimeout(async () => {
-      try {
-        await fetch("/api/timetable", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            session_id,
-            overrides,
-          }),
-        });
-      } catch (err) {
-        console.error("Failed to save overrides", err);
-      }
-    }, 500);
-
-    return () => clearTimeout(timeout);
-  }, [overrides]);
+    try {
+      await fetch("/api/timetable", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session_id,
+          overrides,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to save overrides", err);
+    }
+  };
 
   // =========================
   // 📚 SAFE VALUES
@@ -237,12 +233,13 @@ export function useTimetableLogic() {
     setOverrides({});
   };
 
-  const handleDone = () => {
-    setIsEditing(false); // ✅ disables modal
+  const handleDone = async () => {
+    await saveOverrides(); // ✅ save once
+    setIsEditing(false);
   };
 
   // =========================
-  // 🚫 NAVIGATION GUARD CORE
+  // 🚫 NAVIGATION GUARD
   // =========================
   const requestLeave = (action) => {
     if (!isEditing || !hasChanges) {
@@ -257,6 +254,8 @@ export function useTimetableLogic() {
   const handleDiscard = () => {
     setShowLeaveModal(false);
 
+    setOverrides({}); // ✅ discard changes
+
     if (pendingAction) {
       pendingAction();
       setPendingAction(null);
@@ -269,20 +268,20 @@ export function useTimetableLogic() {
   };
 
   // =========================
-  // 🔥 SAFE STATE SETTER (KEY FIX)
+  // 🔥 SAFE STATE SETTER
   // =========================
   const setActiveDayIndex = (index) => {
     requestLeave(() => _setActiveDayIndex(index));
   };
 
-  const safeSetActiveDay = setActiveDayIndex; // alias
+  const safeSetActiveDay = setActiveDayIndex;
 
   const safePush = (url) => {
     requestLeave(() => router.push(url));
   };
 
   // =========================
-  // 🚫 BACK BUTTON FIX
+  // 🚫 BACK BUTTON
   // =========================
   useEffect(() => {
     const handlePopState = () => {
@@ -406,9 +405,8 @@ export function useTimetableLogic() {
     currentPeriod,
     nextClass,
 
-    // ✅ SAFE + COMPATIBLE
     activeDayIndex: activeDayIndexState,
-    setActiveDayIndex, // 🔥 FIXED (safe wrapper)
+    setActiveDayIndex,
     safeSetActiveDay,
 
     isEditing,
@@ -422,17 +420,14 @@ export function useTimetableLogic() {
     subjectColorMap,
     currentRef,
 
-    // swipe
     handleTouchStart,
     handleTouchEnd,
     handleTouchMove,
     dragX,
     isDragging,
 
-    // navigation
     safePush,
 
-    // modal
     showLeaveModal,
     handleDiscard,
     handleStay,
