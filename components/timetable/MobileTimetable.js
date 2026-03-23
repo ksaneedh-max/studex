@@ -39,7 +39,11 @@ export default function MobileTimetable({
           return (
             <button
               key={d}
-              onClick={() => setActiveDayIndex(idx)}
+              onClick={() => {
+                // 🔥 prevent accidental tap during swipe
+                if (isDragging) return;
+                setActiveDayIndex(idx);
+              }}
               className={`w-9 h-9 rounded-lg text-sm font-semibold flex items-center justify-center transition
                 ${isActive
                   ? "bg-black text-white"
@@ -72,13 +76,14 @@ export default function MobileTimetable({
       >
         {/* 🎬 SLIDER */}
         <div
-          className={`flex ${
+          className={`flex will-change-transform ${
             isDragging
               ? ""
               : "transition-transform duration-300 ease-out"
           }`}
           style={{
-            transform: `translateX(calc(-${activeDayIndex * 100}% + ${dragX}px))`,
+            // 🔥 FIXED: separate transforms (no calc mix)
+            transform: `translateX(${ -activeDayIndex * 100 }%) translateX(${dragX}px)`,
           }}
         >
           {days.map(([day, periods]) => {
