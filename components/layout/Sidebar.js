@@ -6,6 +6,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { loginUser } from "@/lib/api";
 import { saveData, clearStorage } from "@/lib/storage";
 import { useState, useEffect } from "react";
+import { Share2 } from "lucide-react";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -31,6 +32,7 @@ export default function Sidebar() {
   const toolLinks = [
     { name: "Course List", href: "/subjects" },
     { name: "Skip Planner", href: "/skip-planner" },
+    { name: "Share", href: "/share", icon: Share2 },
   ];
 
   useEffect(() => {
@@ -107,29 +109,44 @@ export default function Sidebar() {
   };
 
   const renderLink = (link) => {
-    const active = pathname.startsWith(link.href);
+  const active = pathname.startsWith(link.href);
+  const Icon = link.icon;
 
-    return (
-      <Link
-        key={link.href}
-        href={link.href}
-        onClick={() => setOpen(false)}
-        className={`
-          flex items-center justify-between
-          px-3 py-2 rounded-lg text-sm font-medium
-          transition-all
-          ${
-            active
-              ? "bg-black text-white"
-              : "text-gray-600 hover:bg-gray-100"
-          }
-        `}
-      >
-        {link.name}
+  return (
+    <Link
+      key={link.href}
+      href={link.href}
+      onClick={() => setOpen(false)}
+      className={`
+        flex items-center
+        px-3 py-2 rounded-lg text-sm font-medium
+        transition-all
+        ${
+          active
+            ? "bg-black text-white"
+            : "text-gray-600 hover:bg-gray-100"
+        }
+      `}
+    >
+      {/* TEXT + ICON TOGETHER */}
+      <div className="flex items-center gap-2">
+        <span>{link.name}</span>
+
+        {Icon && (
+          <Icon
+            size={16}
+            className={active ? "text-white" : "text-gray-400"}
+          />
+        )}
+      </div>
+
+      {/* OPTIONAL: keep dot at far right */}
+      <div className="ml-auto">
         {active && <span className="text-xs">●</span>}
-      </Link>
-    );
-  };
+      </div>
+    </Link>
+  );
+};
 
   return (
     <>
