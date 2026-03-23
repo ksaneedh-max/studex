@@ -16,7 +16,6 @@ export default function AuthProvider({ children }) {
 
   const { setData, setLoading } = useAppStore();
 
-  // ✅ NEW: readiness state (prevents premature redirect)
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -25,7 +24,6 @@ export default function AuthProvider({ children }) {
       const session_id = localStorage.getItem("session_id");
       const lastFetch = getLastFetch();
 
-      // 🔥 session_id is source of truth
       const isLoggedIn = !!session_id;
 
       // =========================
@@ -41,7 +39,7 @@ export default function AuthProvider({ children }) {
       if (isLoggedIn) {
         const now = Date.now();
         const isStale =
-          !lastFetch || now - lastFetch > 2 * 60 * 1000; // 2 mins
+          !lastFetch || now - lastFetch > 2 * 60 * 1000;
 
         if (isStale) {
           try {
@@ -63,7 +61,6 @@ export default function AuthProvider({ children }) {
             }
 
           } catch (err) {
-            // ❗ DO NOT logout immediately
             console.log("⚠️ Refresh failed, keeping session");
           } finally {
             setLoading(false);
@@ -72,7 +69,7 @@ export default function AuthProvider({ children }) {
       }
 
       // =========================
-      // 🔐 ROUTE CONTROL (AFTER CHECK)
+      // 🔐 ROUTE CONTROL
       // =========================
       const isApiRoute = pathname.startsWith("/api");
 
@@ -84,7 +81,6 @@ export default function AuthProvider({ children }) {
         router.replace("/dashboard");
       }
 
-      // ✅ mark ready AFTER everything
       setIsReady(true);
     };
 
@@ -92,12 +88,32 @@ export default function AuthProvider({ children }) {
   }, [pathname, router, setData, setLoading]);
 
   // =========================
-  // ⏳ BLOCK UI UNTIL READY
+  // ⏳ LOADING SCREEN (UPGRADED)
   // =========================
   if (!isReady) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        Checking session...
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-100 animate-fadeIn">
+
+        {/* 🔥 APP NAME */}
+        <h1 className="text-3xl md:text-4xl font-bold tracking-wide mb-4 animate-pulse">
+          Academia DeX
+        </h1>
+
+        {/* 🔄 SPINNER */}
+        <div className="w-10 h-10 border-4 border-gray-200 border-t-black rounded-full animate-spin"></div>
+
+        {/* 🔵 DOT LOADER */}
+        <div className="flex gap-1 mt-4">
+          <div className="w-2 h-2 bg-black rounded-full animate-bounce"></div>
+          <div className="w-2 h-2 bg-black rounded-full animate-bounce [animation-delay:0.2s]"></div>
+          <div className="w-2 h-2 bg-black rounded-full animate-bounce [animation-delay:0.4s]"></div>
+        </div>
+
+        {/* 📝 TEXT */}
+        <p className="mt-4 text-sm text-gray-500">
+          Checking session...
+        </p>
+
       </div>
     );
   }

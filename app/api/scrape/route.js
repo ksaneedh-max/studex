@@ -94,13 +94,15 @@ export async function POST(req) {
     let reused = false;
 
     // =========================
-    // 🔹 STEP 3: Try session reuse
+    // 🔹 STEP 3: Smart reuse (FIXED)
     // =========================
-    try {
-      data = await callAPI(true);
-      reused = true;
-    } catch {
-      data = null;
+    if (finalSession && Object.keys(finalSession).length > 0) {
+      try {
+        data = await callAPI(true);
+        reused = true;
+      } catch {
+        data = null;
+      }
     }
 
     // =========================
@@ -176,15 +178,13 @@ export async function POST(req) {
     }
 
     // =========================
-    // 🔥 STEP 6: OPTIMIZED ANALYTICS (NEW)
+    // 🔥 STEP 6: OPTIMIZED ANALYTICS
     // =========================
-
-    // 🔹 10-min limiter
     const trackKey = `track:${newSessionId}`;
     const alreadyTracked = await redis.get(trackKey);
 
     if (!alreadyTracked) {
-      await redis.set(trackKey, "1", { ex: 600 }); // 10 minutes
+      await redis.set(trackKey, "1", { ex: 600 });
 
       const now = new Date();
       const date = now.toISOString().slice(0, 10);
@@ -192,8 +192,8 @@ export async function POST(req) {
 
       const key = `stats:hourly:${date}:${hour}`;
 
-      // 🔥 ONLY 1 WRITE
-      await redis.incr(key);
+      // 🔥 non-blocking analytics
+      redis.incr(key);
     }
 
     // =========================

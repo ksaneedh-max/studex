@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { loginUser } from "@/lib/api";
 import { useAppStore } from "@/store/useAppStore";
-import { saveData, getData } from "@/lib/storage";
+import { saveData } from "@/lib/storage";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -16,25 +16,16 @@ export default function LoginPage() {
   const [checking, setChecking] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
 
-  // 🔥 LOCAL loading (IMPORTANT)
+  // 🔥 LOCAL loading
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // =========================
-  // 🔄 AUTO LOGIN CHECK
+  // 🔄 REMOVE AUTO LOGIN CHECK (FIXED)
   // =========================
   useEffect(() => {
-    const savedData = getData();
-    const session_id = localStorage.getItem("session_id");
-
-    if (savedData && session_id) {
-      setData(savedData);
-      setTimeout(() => {
-        router.replace("/dashboard");
-      }, 100);
-    } else {
-      setChecking(false);
-    }
-  }, [setData, router]);
+    // ✅ Just allow UI to render
+    setChecking(false);
+  }, []);
 
   // =========================
   // 🔐 LOGIN HANDLER
@@ -48,7 +39,7 @@ export default function LoginPage() {
     }
 
     try {
-      setIsSubmitting(true); // 🔥 instant UI update
+      setIsSubmitting(true);
       setError(null);
 
       let formattedEmail = email.trim().toLowerCase();
