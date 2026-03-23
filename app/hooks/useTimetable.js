@@ -278,10 +278,13 @@ export function useTimetableLogic() {
 const [dragX, setDragX] = useState(0);
 const [isDragging, setIsDragging] = useState(false);
 
-// ✅ FIX: persist values across renders
+// ✅ persist values across renders
 const touchStartX = useRef(0);
 const touchStartY = useRef(0);
 const touchStartTime = useRef(0);
+
+// ✅ prevent double swipe
+const hasSwiped = useRef(false);
 
 const triggerHaptic = () => {
   if (typeof window !== "undefined" && navigator.vibrate) {
@@ -294,37 +297,41 @@ const handleTouchStart = (e) => {
   touchStartY.current = e.touches[0].clientY;
   touchStartTime.current = Date.now();
 
+  hasSwiped.current = false; // 🔥 reset lock
   setIsDragging(true);
 };
 
 const handleTouchMove = (e) => {
-  if (!isDragging) return;
+  if (!isDragging || hasSwiped.current) return;
 
   const currentX = e.touches[0].clientX;
   const diff = currentX - touchStartX.current;
 
-  // 🔥 smoother + stable
+  // 🔥 smooth drag
   setDragX(diff * 0.7);
 };
 
 const handleTouchEnd = (e) => {
+  if (hasSwiped.current) {
+    setDragX(0);
+    setIsDragging(false);
+    return;
+  }
+
   const touchEndX = e.changedTouches[0].clientX;
   const touchEndY = e.changedTouches[0].clientY;
 
   const diffX = touchStartX.current - touchEndX;
   const diffY = touchStartY.current - touchEndY;
 
-  const time = Date.now() - touchStartTime.current;
-
   setIsDragging(false);
 
   const absX = Math.abs(diffX);
   const absY = Math.abs(diffY);
 
-  const MIN_DISTANCE = 80;   // 🔥 slightly lower = better feel
-  const MAX_OFF_AXIS = 100;  // allow slight diagonal
+  const MIN_DISTANCE = 80;
 
-  // ❌ ignore vertical scroll
+  // ❌ ignore vertical swipe
   if (absY > absX) {
     setDragX(0);
     return;
@@ -332,12 +339,14 @@ const handleTouchEnd = (e) => {
 
   // 👉 NEXT
   if (diffX > MIN_DISTANCE && activeDayIndexState < days.length - 1) {
+    hasSwiped.current = true;
     _setActiveDayIndex((p) => p + 1);
     triggerHaptic();
   }
 
   // 👉 PREVIOUS
   else if (diffX < -MIN_DISTANCE && activeDayIndexState > 0) {
+    hasSwiped.current = true;
     _setActiveDayIndex((p) => p - 1);
     triggerHaptic();
   }

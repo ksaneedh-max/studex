@@ -6,14 +6,19 @@ import useSwipeNav from "@/lib/useSwipeNav";
 export default function SwipeWrapper({ children }) {
   const pathname = usePathname();
 
-  const isTimetable = pathname === "/timetable";
+  // ✅ Disable global swipe on timetable (has its own swipe)
+  const isTimetable = pathname.startsWith("/timetable");
 
-  const swipeHandlers = isTimetable
-    ? {}
-    : useSwipeNav(pathname);
+  // ✅ Only initialize hook when needed
+  const swipeHandlers = !isTimetable
+    ? useSwipeNav(pathname)
+    : {};
 
   return (
-    <div {...swipeHandlers} className="h-full">
+    <div
+      {...swipeHandlers}
+      className="h-full"
+    >
       {children}
     </div>
   );
