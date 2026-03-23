@@ -39,13 +39,26 @@ const setLocalOverrides = (data) => {
 
 export function useTimetableLogic() {
   const router = useRouter();
-  const { data, setData } = useAppStore();
 
+  // 🔥 GLOBAL STORE
+  const {
+    data,
+    setData,
+
+    // 🔥 GLOBAL NAV GUARD
+    setEditingGlobal,
+    setHasChangesGlobal,
+    requestLeaveGlobal,
+  } = useAppStore();
+
+  // =========================
+  // LOCAL STATE
+  // =========================
   const [activeDayIndexState, _setActiveDayIndex] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [overrides, setOverrides] = useState({});
 
-  // 🔥 modal state
+  // ⚠️ local modal (kept for page safety)
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
 
@@ -129,6 +142,17 @@ export function useTimetableLogic() {
   };
 
   // =========================
+  // 🔥 SYNC TO GLOBAL STORE
+  // =========================
+  useEffect(() => {
+    setEditingGlobal(isEditing);
+  }, [isEditing]);
+
+  useEffect(() => {
+    setHasChangesGlobal(hasChanges);
+  }, [hasChanges]);
+
+  // =========================
   // 📚 SAFE VALUES
   // =========================
   const subjects = data?.subjects || [];
@@ -168,57 +192,7 @@ export function useTimetableLogic() {
   }, [todayKey, days]);
 
   // =========================
-  // 🔍 SUBJECT MATCHING
-  // =========================
-  const findSubject = (slotValue) => {
-    if (!slotValue) return null;
-
-    const slots = slotValue.split("/").map((s) => s.trim());
-
-    return (
-      subjects.find((s) => {
-        if (!s.slot) return false;
-
-        if (slots.includes(s.slot)) return true;
-
-        return slots.some(
-          (slot) =>
-            slot.includes(s.slot) || s.slot.includes(slot)
-        );
-      }) || null
-    );
-  };
-
-  // =========================
-  // 🎨 COLOR MAP
-  // =========================
-  const subjectColorMap = useMemo(() => {
-    const colors = [
-      "bg-blue-100 border-blue-300",
-      "bg-green-100 border-green-300",
-      "bg-purple-100 border-purple-300",
-      "bg-yellow-100 border-yellow-300",
-      "bg-pink-100 border-pink-300",
-      "bg-indigo-100 border-indigo-300",
-      "bg-red-100 border-red-300",
-      "bg-teal-100 border-teal-300",
-    ];
-
-    const map = {};
-    let i = 0;
-
-    subjects.forEach((s) => {
-      if (!map[s.course_code]) {
-        map[s.course_code] = colors[i % colors.length];
-        i++;
-      }
-    });
-
-    return map;
-  }, [subjects]);
-
-  // =========================
-  // ✏️ EDIT HANDLERS
+  // ✏️ EDIT
   // =========================
   const handleOverride = (day, period, courseCode) => {
     const key = `${day}-${period}`;
@@ -234,12 +208,12 @@ export function useTimetableLogic() {
   };
 
   const handleDone = async () => {
-    await saveOverrides(); // ✅ save once
+    await saveOverrides();
     setIsEditing(false);
   };
 
   // =========================
-  // 🚫 NAVIGATION GUARD
+  // 🚫 LOCAL GUARD (page)
   // =========================
   const requestLeave = (action) => {
     if (!isEditing || !hasChanges) {
@@ -253,8 +227,7 @@ export function useTimetableLogic() {
 
   const handleDiscard = () => {
     setShowLeaveModal(false);
-
-    setOverrides({}); // ✅ discard changes
+    setOverrides({});
 
     if (pendingAction) {
       pendingAction();
@@ -268,16 +241,14 @@ export function useTimetableLogic() {
   };
 
   // =========================
-  // 🔥 SAFE STATE SETTER
+  // 🔥 SAFE NAV (GLOBAL)
   // =========================
-  const setActiveDayIndex = (index) => {
-    requestLeave(() => _setActiveDayIndex(index));
+  const safePush = (url) => {
+    requestLeaveGlobal(() => router.push(url));
   };
 
-  const safeSetActiveDay = setActiveDayIndex;
-
-  const safePush = (url) => {
-    requestLeave(() => router.push(url));
+  const setActiveDayIndex = (index) => {
+    requestLeave(() => _setActiveDayIndex(index));
   };
 
   // =========================
@@ -324,7 +295,7 @@ export function useTimetableLogic() {
   }, [isEditing, hasChanges]);
 
   // =========================
-  // 📍 AUTO SCROLL
+  // 📍 SCROLL
   // =========================
   useEffect(() => {
     currentRef.current?.scrollIntoView({
@@ -332,69 +303,6 @@ export function useTimetableLogic() {
       block: "center",
     });
   }, [activeDayIndexState, currentPeriod]);
-
-  // =========================
-  // 👆 SWIPE
-  // =========================
-  const [dragX, setDragX] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let touchStartTime = 0;
-
-  const triggerHaptic = () => {
-    if (typeof window !== "undefined" && navigator.vibrate) {
-      navigator.vibrate(10);
-    }
-  };
-
-  const handleTouchStart = (e) => {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchStartTime = Date.now();
-    setIsDragging(true);
-  };
-
-  const handleTouchMove = (e) => {
-    if (!isDragging) return;
-
-    const currentX = e.touches[0].clientX;
-    setDragX(currentX - touchStartX);
-  };
-
-  const handleTouchEnd = (e) => {
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
-
-    const diffX = touchStartX - touchEndX;
-    const diffY = touchStartY - touchEndY;
-
-    const time = Date.now() - touchStartTime;
-
-    setIsDragging(false);
-
-    if (Math.abs(diffX) < Math.abs(diffY) * 1.5) {
-      setDragX(0);
-      return;
-    }
-
-    const velocity = Math.abs(diffX) / time;
-
-    if ((Math.abs(diffX) > 80 && time < 400) || velocity > 0.5) {
-      if (diffX > 0 && activeDayIndexState < days.length - 1) {
-        setActiveDayIndex(activeDayIndexState + 1);
-        triggerHaptic();
-      }
-
-      if (diffX < 0 && activeDayIndexState > 0) {
-        setActiveDayIndex(activeDayIndexState - 1);
-        triggerHaptic();
-      }
-    }
-
-    setDragX(0);
-  };
 
   return {
     data,
@@ -407,7 +315,6 @@ export function useTimetableLogic() {
 
     activeDayIndex: activeDayIndexState,
     setActiveDayIndex,
-    safeSetActiveDay,
 
     isEditing,
     setIsEditing,
@@ -416,15 +323,21 @@ export function useTimetableLogic() {
     handleResetAll,
     handleDone,
 
-    findSubject,
-    subjectColorMap,
-    currentRef,
+    findSubject: (slotValue) => {
+      if (!slotValue) return null;
+      const slots = slotValue.split("/").map((s) => s.trim());
+      return (
+        subjects.find((s) =>
+          slots.some(
+            (slot) =>
+              slot.includes(s.slot) || s.slot?.includes(slot)
+          )
+        ) || null
+      );
+    },
 
-    handleTouchStart,
-    handleTouchEnd,
-    handleTouchMove,
-    dragX,
-    isDragging,
+    subjectColorMap: {},
+    currentRef,
 
     safePush,
 

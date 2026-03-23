@@ -1,6 +1,7 @@
 "use client";
 
 import { useTimetableLogic } from "@/app/hooks/useTimetable";
+import { useAppStore } from "@/store/useAppStore";
 
 import MobileTimetable from "@/components/timetable/MobileTimetable";
 import DesktopTimetable from "@/components/timetable/DesktopTimetable";
@@ -27,21 +28,20 @@ export default function Timetable() {
     subjectColorMap,
     currentRef,
 
-    // 🔥 SWIPE
+    // swipe
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
     dragX,
     isDragging,
-
-    // 🔥 NAVIGATION (for future use in nav bars)
-    safePush,
-
-    // 🔥 MODAL
-    showLeaveModal,
-    handleDiscard,
-    handleStay,
   } = useTimetableLogic();
+
+  // 🔥 GLOBAL MODAL (from store)
+  const {
+    showLeaveModal,
+    handleDiscardGlobal,
+    handleStayGlobal,
+  } = useAppStore();
 
   if (!data) {
     return <div className="p-6">Loading...</div>;
@@ -85,7 +85,7 @@ export default function Timetable() {
           <button
             onClick={async () => {
               if (isEditing) {
-                await handleDone(); // ✅ save once + exit edit
+                await handleDone(); // ✅ save once
               } else {
                 setIsEditing(true);
               }
@@ -124,7 +124,7 @@ export default function Timetable() {
         <MobileTimetable
           days={days}
           activeDayIndex={activeDayIndex}
-          setActiveDayIndex={setActiveDayIndex} // ✅ already safe
+          setActiveDayIndex={setActiveDayIndex}
           todayKey={todayKey}
           currentPeriod={currentPeriod}
           findSubject={findSubject}
@@ -135,7 +135,6 @@ export default function Timetable() {
           subjects={subjects}
           subjectColorMap={subjectColorMap}
 
-          // 🔥 SWIPE
           dragX={dragX}
           isDragging={isDragging}
           handleTouchStart={handleTouchStart}
@@ -157,7 +156,7 @@ export default function Timetable() {
         />
       </div>
 
-      {/* 🔥 GLOBAL UNSAVED CHANGES MODAL */}
+      {/* 🔥 GLOBAL MODAL */}
       {showLeaveModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white p-5 rounded-xl w-80 shadow-lg">
@@ -171,14 +170,14 @@ export default function Timetable() {
 
             <div className="flex justify-end gap-2">
               <button
-                onClick={handleStay}
+                onClick={handleStayGlobal}
                 className="px-3 py-1 rounded hover:bg-gray-100"
               >
                 Stay
               </button>
 
               <button
-                onClick={handleDiscard}
+                onClick={handleDiscardGlobal}
                 className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
               >
                 Discard

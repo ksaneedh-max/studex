@@ -1,11 +1,65 @@
 import { create } from "zustand";
 
-export const useAppStore = create((set) => ({
+export const useAppStore = create((set, get) => ({
   data: null,
   session: null,
   credentials: null,
   loading: false,
   error: null,
+
+  // =========================
+  // 🔥 GLOBAL NAV GUARD STATE
+  // =========================
+  isEditingGlobal: false,
+  hasChangesGlobal: false,
+  pendingAction: null,
+  showLeaveModal: false,
+
+  // =========================
+  // 🔥 GLOBAL NAV GUARD ACTIONS
+  // =========================
+  setEditingGlobal: (val) =>
+    set(() => ({
+      isEditingGlobal: val,
+    })),
+
+  setHasChangesGlobal: (val) =>
+    set(() => ({
+      hasChangesGlobal: val,
+    })),
+
+  requestLeaveGlobal: (action) => {
+    const { isEditingGlobal, hasChangesGlobal } = get();
+
+    if (!isEditingGlobal || !hasChangesGlobal) {
+      action?.();
+      return;
+    }
+
+    set({
+      showLeaveModal: true,
+      pendingAction: action,
+    });
+  },
+
+  handleDiscardGlobal: () =>
+    set((state) => {
+      // execute pending navigation
+      state.pendingAction?.();
+
+      return {
+        showLeaveModal: false,
+        pendingAction: null,
+        hasChangesGlobal: false,
+        isEditingGlobal: false,
+      };
+    }),
+
+  handleStayGlobal: () =>
+    set({
+      showLeaveModal: false,
+      pendingAction: null,
+    }),
 
   // =========================
   // ✅ DATA
@@ -28,7 +82,7 @@ export const useAppStore = create((set) => ({
     })),
 
   // =========================
-  // ✅ CREDENTIALS (REQUIRED FOR AUTO REFRESH)
+  // ✅ CREDENTIALS
   // =========================
   setCredentials: (credentials) =>
     set(() => ({
@@ -56,7 +110,7 @@ export const useAppStore = create((set) => ({
     })),
 
   // =========================
-  // 🔥 OPTIONAL: CLEAR ONLY DATA (keep session)
+  // 🔥 CLEAR ONLY DATA
   // =========================
   clearData: () =>
     set(() => ({
@@ -73,5 +127,11 @@ export const useAppStore = create((set) => ({
       credentials: null,
       error: null,
       loading: false,
+
+      // 🔥 also reset guard
+      isEditingGlobal: false,
+      hasChangesGlobal: false,
+      pendingAction: null,
+      showLeaveModal: false,
     })),
 }));
