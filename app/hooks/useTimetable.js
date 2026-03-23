@@ -15,7 +15,7 @@ import {
 } from "@/lib/timetable";
 
 // =========================
-// 🔥 LOCAL STORAGE HELPERS (FIXED)
+// 🔥 LOCAL STORAGE HELPERS
 // =========================
 const getLocalKey = () => {
   if (typeof window === "undefined") return "timetable_overrides";
@@ -41,9 +41,17 @@ export function useTimetableLogic() {
   const router = useRouter();
   const { data, setData } = useAppStore();
 
-  const [activeDayIndex, setActiveDayIndex] = useState(0);
+  const [activeDayIndexState, _setActiveDayIndex] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [overrides, setOverrides] = useState({});
+
+  // 🔥 modal state
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+
+  const hasChanges = useMemo(() => {
+    return Object.keys(overrides || {}).length > 0;
+  }, [overrides]);
 
   const currentRef = useRef(null);
 
@@ -69,14 +77,12 @@ export function useTimetableLogic() {
     const loadOverrides = async () => {
       const session_id = localStorage.getItem("session_id");
 
-      // 1️⃣ Try local first
       const local = getLocalOverrides();
 
       if (local && Object.keys(local).length > 0) {
         setOverrides(local);
       }
 
-      // 2️⃣ Always try server (to sync across devices)
       if (!session_id) return;
 
       try {
@@ -98,10 +104,9 @@ export function useTimetableLogic() {
   }, []);
 
   // =========================
-  // 🔥 SAVE OVERRIDES (DEBOUNCED)
+  // 🔥 SAVE OVERRIDES
   // =========================
   useEffect(() => {
-    // save locally instantly
     setLocalOverrides(overrides);
 
     const session_id = localStorage.getItem("session_id");
@@ -163,7 +168,7 @@ export function useTimetableLogic() {
     if (!todayKey) return;
 
     const index = days.findIndex(([d]) => d === todayKey);
-    if (index !== -1) setActiveDayIndex(index);
+    if (index !== -1) _setActiveDayIndex(index);
   }, [todayKey, days]);
 
   // =========================
@@ -232,6 +237,93 @@ export function useTimetableLogic() {
     setOverrides({});
   };
 
+  const handleDone = () => {
+    setIsEditing(false); // ✅ disables modal
+  };
+
+  // =========================
+  // 🚫 NAVIGATION GUARD CORE
+  // =========================
+  const requestLeave = (action) => {
+    if (!isEditing || !hasChanges) {
+      action?.();
+      return;
+    }
+
+    setPendingAction(() => action);
+    setShowLeaveModal(true);
+  };
+
+  const handleDiscard = () => {
+    setShowLeaveModal(false);
+
+    if (pendingAction) {
+      pendingAction();
+      setPendingAction(null);
+    }
+  };
+
+  const handleStay = () => {
+    setShowLeaveModal(false);
+    setPendingAction(null);
+  };
+
+  // =========================
+  // 🔥 SAFE STATE SETTER (KEY FIX)
+  // =========================
+  const setActiveDayIndex = (index) => {
+    requestLeave(() => _setActiveDayIndex(index));
+  };
+
+  const safeSetActiveDay = setActiveDayIndex; // alias
+
+  const safePush = (url) => {
+    requestLeave(() => router.push(url));
+  };
+
+  // =========================
+  // 🚫 BACK BUTTON FIX
+  // =========================
+  useEffect(() => {
+    const handlePopState = () => {
+      if (!isEditing || !hasChanges) return;
+
+      setShowLeaveModal(true);
+
+      window.history.pushState(null, "", window.location.href);
+
+      setPendingAction(() => () => {
+        window.removeEventListener("popstate", handlePopState);
+        window.history.back();
+      });
+    };
+
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [isEditing, hasChanges]);
+
+  // =========================
+  // 🚫 REFRESH
+  // =========================
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (!isEditing || !hasChanges) return;
+
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isEditing, hasChanges]);
+
   // =========================
   // 📍 AUTO SCROLL
   // =========================
@@ -240,105 +332,109 @@ export function useTimetableLogic() {
       behavior: "smooth",
       block: "center",
     });
-  }, [activeDayIndex, currentPeriod]);
+  }, [activeDayIndexState, currentPeriod]);
 
-// =========================
-// 👆 SWIPE (ADVANCED)
-// =========================
-const [dragX, setDragX] = useState(0);
-const [isDragging, setIsDragging] = useState(false);
+  // =========================
+  // 👆 SWIPE
+  // =========================
+  const [dragX, setDragX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
-let touchStartX = 0;
-let touchStartY = 0;
-let touchStartTime = 0;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTime = 0;
 
-const triggerHaptic = () => {
-  if (typeof window !== "undefined" && navigator.vibrate) {
-    navigator.vibrate(10);
-  }
-};
+  const triggerHaptic = () => {
+    if (typeof window !== "undefined" && navigator.vibrate) {
+      navigator.vibrate(10);
+    }
+  };
 
-const handleTouchStart = (e) => {
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
-  touchStartTime = Date.now();
-  setIsDragging(true);
-};
+  const handleTouchStart = (e) => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchStartTime = Date.now();
+    setIsDragging(true);
+  };
 
-const handleTouchMove = (e) => {
-  if (!isDragging) return;
+  const handleTouchMove = (e) => {
+    if (!isDragging) return;
 
-  const currentX = e.touches[0].clientX;
-  const diffX = currentX - touchStartX;
+    const currentX = e.touches[0].clientX;
+    setDragX(currentX - touchStartX);
+  };
 
-  setDragX(diffX);
-};
+  const handleTouchEnd = (e) => {
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
 
-const handleTouchEnd = (e) => {
-  const touchEndX = e.changedTouches[0].clientX;
-  const touchEndY = e.changedTouches[0].clientY;
+    const diffX = touchStartX - touchEndX;
+    const diffY = touchStartY - touchEndY;
 
-  const diffX = touchStartX - touchEndX;
-  const diffY = touchStartY - touchEndY;
+    const time = Date.now() - touchStartTime;
 
-  const time = Date.now() - touchStartTime;
+    setIsDragging(false);
 
-  setIsDragging(false);
+    if (Math.abs(diffX) < Math.abs(diffY) * 1.5) {
+      setDragX(0);
+      return;
+    }
 
-  // 🚫 Ignore vertical
-  if (Math.abs(diffX) < Math.abs(diffY) * 1.5) {
+    const velocity = Math.abs(diffX) / time;
+
+    if ((Math.abs(diffX) > 80 && time < 400) || velocity > 0.5) {
+      if (diffX > 0 && activeDayIndexState < days.length - 1) {
+        setActiveDayIndex(activeDayIndexState + 1);
+        triggerHaptic();
+      }
+
+      if (diffX < 0 && activeDayIndexState > 0) {
+        setActiveDayIndex(activeDayIndexState - 1);
+        triggerHaptic();
+      }
+    }
+
     setDragX(0);
-    return;
-  }
+  };
 
-  const velocity = Math.abs(diffX) / time;
+  return {
+    data,
+    batch,
+    subjects,
+    days,
+    todayKey,
+    currentPeriod,
+    nextClass,
 
-  // 🧠 Momentum logic
-  if (
-    (Math.abs(diffX) > 80 && time < 400) ||
-    velocity > 0.5
-  ) {
-    if (diffX > 0 && activeDayIndex < days.length - 1) {
-      setActiveDayIndex((p) => p + 1);
-      triggerHaptic();
-    }
+    // ✅ SAFE + COMPATIBLE
+    activeDayIndex: activeDayIndexState,
+    setActiveDayIndex, // 🔥 FIXED (safe wrapper)
+    safeSetActiveDay,
 
-    if (diffX < 0 && activeDayIndex > 0) {
-      setActiveDayIndex((p) => p - 1);
-      triggerHaptic();
-    }
-  }
+    isEditing,
+    setIsEditing,
+    overrides,
+    handleOverride,
+    handleResetAll,
+    handleDone,
 
-  // 🎯 Snap back
-  setDragX(0);
-};
+    findSubject,
+    subjectColorMap,
+    currentRef,
 
-return {
-  data,
-  batch,
-  subjects,
-  days,
-  todayKey,
-  currentPeriod,
-  nextClass,
-  activeDayIndex,
-  setActiveDayIndex,
-  isEditing,
-  setIsEditing,
-  overrides,
-  handleOverride,
-  handleResetAll,
-  findSubject,
-  subjectColorMap,
-  currentRef,
+    // swipe
+    handleTouchStart,
+    handleTouchEnd,
+    handleTouchMove,
+    dragX,
+    isDragging,
 
-  // 👇 KEEP THESE
-  handleTouchStart,
-  handleTouchEnd,
+    // navigation
+    safePush,
 
-  // 🔥 ADD THESE
-  handleTouchMove,
-  dragX,
-  isDragging,
-};
+    // modal
+    showLeaveModal,
+    handleDiscard,
+    handleStay,
+  };
 }

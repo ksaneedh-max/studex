@@ -17,7 +17,7 @@ export default function MobileTimetable({
   handleOverride,
   subjects,
 
-  // 🔥 NEW PROPS (from hook)
+  // 🔥 SWIPE PROPS
   dragX,
   isDragging,
   handleTouchStart,
@@ -53,23 +53,29 @@ export default function MobileTimetable({
         })}
       </div>
 
-      {/* 📱 SWIPE CONTAINER */}
+      {/* 📱 SWIPE AREA */}
       <div
+        className="overflow-hidden touch-pan-y"
         onTouchStart={(e) => {
+          // 🚫 Prevent swipe when interacting with dropdown
           if (e.target.closest("select")) return;
           handleTouchStart(e);
         }}
-        onTouchMove={handleTouchMove}
+        onTouchMove={(e) => {
+          if (e.target.closest("select")) return;
+          handleTouchMove(e);
+        }}
         onTouchEnd={(e) => {
           if (e.target.closest("select")) return;
           handleTouchEnd(e);
         }}
-        className="overflow-hidden"
       >
         {/* 🎬 SLIDER */}
         <div
           className={`flex ${
-            isDragging ? "" : "transition-transform duration-300 ease-out"
+            isDragging
+              ? ""
+              : "transition-transform duration-300 ease-out"
           }`}
           style={{
             transform: `translateX(calc(-${activeDayIndex * 100}% + ${dragX}px))`,
