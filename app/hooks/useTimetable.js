@@ -15,20 +15,26 @@ import {
 } from "@/lib/timetable";
 
 // =========================
-// 🔥 LOCAL STORAGE HELPERS
+// 🔥 LOCAL STORAGE HELPERS (FIXED)
 // =========================
-const LOCAL_KEY = "timetable_overrides";
+const getLocalKey = () => {
+  if (typeof window === "undefined") return "timetable_overrides";
+  const session_id = localStorage.getItem("session_id") || "guest";
+  return `timetable_overrides_${session_id}`;
+};
 
 const getLocalOverrides = () => {
   try {
-    return JSON.parse(localStorage.getItem(LOCAL_KEY)) || {};
+    return JSON.parse(localStorage.getItem(getLocalKey())) || {};
   } catch {
     return {};
   }
 };
 
 const setLocalOverrides = (data) => {
-  localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+  try {
+    localStorage.setItem(getLocalKey(), JSON.stringify(data));
+  } catch {}
 };
 
 export function useTimetableLogic() {
@@ -57,21 +63,20 @@ export function useTimetableLogic() {
   }, [data, setData, router]);
 
   // =========================
-  // 🔥 LOAD OVERRIDES (SMART)
+  // 🔥 LOAD OVERRIDES
   // =========================
   useEffect(() => {
     const loadOverrides = async () => {
       const session_id = localStorage.getItem("session_id");
 
-      // 1️⃣ Try localStorage
+      // 1️⃣ Try local first
       const local = getLocalOverrides();
 
       if (local && Object.keys(local).length > 0) {
         setOverrides(local);
-        return;
       }
 
-      // 2️⃣ Fetch from Redis
+      // 2️⃣ Always try server (to sync across devices)
       if (!session_id) return;
 
       try {
