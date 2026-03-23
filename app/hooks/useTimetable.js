@@ -242,46 +242,103 @@ export function useTimetableLogic() {
     });
   }, [activeDayIndex, currentPeriod]);
 
-  // =========================
-  // 👆 SWIPE
-  // =========================
-  let touchStartX = 0;
+// =========================
+// 👆 SWIPE (ADVANCED)
+// =========================
+const [dragX, setDragX] = useState(0);
+const [isDragging, setIsDragging] = useState(false);
 
-  const handleTouchStart = (e) => {
-    touchStartX = e.touches[0].clientX;
-  };
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
 
-  const handleTouchEnd = (e) => {
-    const diff = touchStartX - e.changedTouches[0].clientX;
+const triggerHaptic = () => {
+  if (typeof window !== "undefined" && navigator.vibrate) {
+    navigator.vibrate(10);
+  }
+};
 
-    if (diff > 50 && activeDayIndex < days.length - 1) {
+const handleTouchStart = (e) => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  touchStartTime = Date.now();
+  setIsDragging(true);
+};
+
+const handleTouchMove = (e) => {
+  if (!isDragging) return;
+
+  const currentX = e.touches[0].clientX;
+  const diffX = currentX - touchStartX;
+
+  setDragX(diffX);
+};
+
+const handleTouchEnd = (e) => {
+  const touchEndX = e.changedTouches[0].clientX;
+  const touchEndY = e.changedTouches[0].clientY;
+
+  const diffX = touchStartX - touchEndX;
+  const diffY = touchStartY - touchEndY;
+
+  const time = Date.now() - touchStartTime;
+
+  setIsDragging(false);
+
+  // 🚫 Ignore vertical
+  if (Math.abs(diffX) < Math.abs(diffY) * 1.5) {
+    setDragX(0);
+    return;
+  }
+
+  const velocity = Math.abs(diffX) / time;
+
+  // 🧠 Momentum logic
+  if (
+    (Math.abs(diffX) > 80 && time < 400) ||
+    velocity > 0.5
+  ) {
+    if (diffX > 0 && activeDayIndex < days.length - 1) {
       setActiveDayIndex((p) => p + 1);
+      triggerHaptic();
     }
 
-    if (diff < -50 && activeDayIndex > 0) {
+    if (diffX < 0 && activeDayIndex > 0) {
       setActiveDayIndex((p) => p - 1);
+      triggerHaptic();
     }
-  };
+  }
 
-  return {
-    data,
-    batch,
-    subjects,
-    days,
-    todayKey,
-    currentPeriod,
-    nextClass,
-    activeDayIndex,
-    setActiveDayIndex,
-    isEditing,
-    setIsEditing,
-    overrides,
-    handleOverride,
-    handleResetAll,
-    findSubject,
-    subjectColorMap,
-    currentRef,
-    handleTouchStart,
-    handleTouchEnd,
-  };
+  // 🎯 Snap back
+  setDragX(0);
+};
+
+return {
+  data,
+  batch,
+  subjects,
+  days,
+  todayKey,
+  currentPeriod,
+  nextClass,
+  activeDayIndex,
+  setActiveDayIndex,
+  isEditing,
+  setIsEditing,
+  overrides,
+  handleOverride,
+  handleResetAll,
+  findSubject,
+  subjectColorMap,
+  currentRef,
+
+  // 👇 KEEP THESE
+  handleTouchStart,
+  handleTouchEnd,
+
+  // 🔥 ADD THESE
+  handleTouchMove,
+  dragX,
+  isDragging,
+};
 }
