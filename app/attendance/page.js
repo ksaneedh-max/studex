@@ -18,6 +18,9 @@ export default function Attendance() {
   const [showPredict, setShowPredict] = useState(false);
   const [predictedData, setPredictedData] = useState(null);
 
+  // ✅ NEW
+  const [overrides, setOverrides] = useState({});
+
   useEffect(() => {
     if (!data) {
       const saved = getData();
@@ -25,6 +28,38 @@ export default function Attendance() {
       else router.replace("/");
     }
   }, [data, setData, router]);
+
+  // ✅ NEW (ONLY LOGIC ADD)
+  useEffect(() => {
+    const loadOverrides = async () => {
+      const session_id = localStorage.getItem("session_id");
+      if (!session_id) return;
+
+      // local first
+      try {
+        const localKey = `timetable_overrides_${session_id}`;
+        const local = JSON.parse(localStorage.getItem(localKey)) || {};
+        if (Object.keys(local).length > 0) {
+          setOverrides(local);
+        }
+      } catch {}
+
+      // server sync
+      try {
+        const res = await fetch(`/api/timetable?session_id=${session_id}`);
+        const data = await res.json();
+
+        if (data.success && data.overrides) {
+          setOverrides(data.overrides);
+
+          const localKey = `timetable_overrides_${session_id}`;
+          localStorage.setItem(localKey, JSON.stringify(data.overrides));
+        }
+      } catch {}
+    };
+
+    loadOverrides();
+  }, []);
 
   if (!data) {
     return (
@@ -200,7 +235,6 @@ export default function Attendance() {
                   ) : present}
                 </p>
 
-                {/* ✅ ONLY CHANGE HERE */}
                 <p>
                   <span className="text-gray-500">Attendance:</span>{" "}
                   {predictedData ? (
@@ -318,6 +352,7 @@ export default function Attendance() {
           onClose={() => setShowPredict(false)}
           onApply={(result) => setPredictedData(result)}
           data={data}
+          overrides={overrides} // ✅ FIX
         />
       )}
 

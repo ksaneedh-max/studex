@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAppStore } from "@/store/useAppStore";
-import { getData, getOverrides } from "@/lib/storage";
+import { getData } from "@/lib/storage";
 
 import plannerData from "@/data/planner.json";
 import timetableData from "@/data/timetable.json";
@@ -23,6 +23,9 @@ export default function SkipPlannerPage() {
   const [showNotice, setShowNotice] = useState(false);
   const [showTimetablePopup, setShowTimetablePopup] = useState(false);
 
+  // ✅ NEW
+  const [overrides, setOverrides] = useState({});
+
   // =========================
   // 🔄 LOAD DATA
   // =========================
@@ -35,6 +38,40 @@ export default function SkipPlannerPage() {
   }, [data, setData, router]);
 
   // =========================
+  // 🔥 LOAD OVERRIDES (FIX)
+  // =========================
+  useEffect(() => {
+    const loadOverrides = async () => {
+      const session_id = localStorage.getItem("session_id");
+      if (!session_id) return;
+
+      // 1️⃣ local
+      try {
+        const localKey = `timetable_overrides_${session_id}`;
+        const local = JSON.parse(localStorage.getItem(localKey)) || {};
+        if (Object.keys(local).length > 0) {
+          setOverrides(local);
+        }
+      } catch {}
+
+      // 2️⃣ server
+      try {
+        const res = await fetch(`/api/timetable?session_id=${session_id}`);
+        const data = await res.json();
+
+        if (data.success && data.overrides) {
+          setOverrides(data.overrides);
+
+          const localKey = `timetable_overrides_${session_id}`;
+          localStorage.setItem(localKey, JSON.stringify(data.overrides));
+        }
+      } catch {}
+    };
+
+    loadOverrides();
+  }, []);
+
+  // =========================
   // 🔔 SKIP NOTICE (ONCE)
   // =========================
   useEffect(() => {
@@ -43,16 +80,15 @@ export default function SkipPlannerPage() {
   }, []);
 
   // =========================
-  // ⚙️ TIMETABLE POPUP
+  // ⚙️ TIMETABLE POPUP (FIXED)
   // =========================
   useEffect(() => {
     const seen = localStorage.getItem("timetable_notice_seen");
-    const overrides = getOverrides();
 
     if (!seen || (overrides && Object.keys(overrides).length > 0)) {
       setShowTimetablePopup(true);
     }
-  }, []);
+  }, [overrides]);
 
   if (!data) {
     return (
@@ -72,14 +108,13 @@ export default function SkipPlannerPage() {
   const timetable =
     batch === "1" ? timetableData.batch1 : timetableData.batch2;
 
-  const overrides = getOverrides();
   const today = getTodayStr();
 
   const result = calculateSkipPlanner({
     plannerData: plannerData["2026"],
     timetable,
     subjects,
-    overrides,
+    overrides, // ✅ FIX
     attendance,
     startDate: today,
   });
@@ -176,15 +211,9 @@ export default function SkipPlannerPage() {
               </p>
 
               <div className="mt-3 space-y-1 text-xs md:text-sm">
-                <p>
-                  <span className="text-gray-500">Current:</span> {percentage}%
-                </p>
-                <p>
-                  <span className="text-gray-500">Remaining Classes:</span> {c.remaining}
-                </p>
-                <p>
-                  <span className="text-gray-500">Projected Total:</span> {c.projectedTotal}
-                </p>
+                <p><span className="text-gray-500">Current:</span> {percentage}%</p>
+                <p><span className="text-gray-500">Remaining Classes:</span> {c.remaining}</p>
+                <p><span className="text-gray-500">Projected Total:</span> {c.projectedTotal}</p>
               </div>
 
               <div className="mt-4 flex justify-between items-center">

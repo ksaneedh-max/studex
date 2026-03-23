@@ -7,10 +7,9 @@ import plannerData from "@/data/planner.json";
 import timetableData from "@/data/timetable.json";
 
 import { getTodayStr } from "@/lib/timetable";
-import { getOverrides } from "@/lib/storage";
 import { predictAttendance } from "@/lib/predict";
 
-export default function PredictModal({ onClose, data, onApply }) {
+export default function PredictModal({ onClose, data, onApply, overrides }) {
   const router = useRouter();
 
   const [selectedDates, setSelectedDates] = useState([]);
@@ -31,8 +30,9 @@ export default function PredictModal({ onClose, data, onApply }) {
   const timetable =
     batch === "1" ? timetableData.batch1 : timetableData.batch2;
 
-  const overrides = getOverrides();
-
+  // =========================
+  // 📐 NAV HEIGHT FIX
+  // =========================
   useEffect(() => {
     const measure = () => {
       const nav = document.querySelector("div.fixed.bottom-0");
@@ -48,6 +48,9 @@ export default function PredictModal({ onClose, data, onApply }) {
     return () => window.removeEventListener("resize", measure);
   }, []);
 
+  // =========================
+  // 📅 AUTO MONTH SELECT
+  // =========================
   useEffect(() => {
     const index = months.findIndex((m) =>
       yearData[m].some((d) => d.date >= today)
@@ -55,6 +58,9 @@ export default function PredictModal({ onClose, data, onApply }) {
     if (index !== -1) setMonthIndex(index);
   }, []);
 
+  // =========================
+  // 📅 DATE SELECT
+  // =========================
   const toggleDate = (date) => {
     if (date < today) return;
 
@@ -65,6 +71,9 @@ export default function PredictModal({ onClose, data, onApply }) {
     );
   };
 
+  // =========================
+  // 🔥 PREDICTION (FIXED)
+  // =========================
   const result =
     selectedDates.length > 0
       ? predictAttendance({
@@ -72,11 +81,14 @@ export default function PredictModal({ onClose, data, onApply }) {
           plannerData: yearData,
           timetable,
           subjects,
-          overrides,
+          overrides, // ✅ NOW COMES FROM PROPS (correct)
           attendance,
         })
       : [];
 
+  // =========================
+  // 📊 DISPLAY CALC
+  // =========================
   const getDisplayData = (pred) => {
     const total = pred.total;
     const absent = pred.absent;
