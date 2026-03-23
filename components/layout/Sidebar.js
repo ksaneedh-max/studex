@@ -14,9 +14,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // ✅ 🔥 FIX: Hide sidebar on login page
-  if (pathname === "/") return null;
-
+  // ✅ ALWAYS declare hooks first
   const [open, setOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -26,6 +24,9 @@ export default function Sidebar() {
     loading,
     clearAll,
   } = useAppStore();
+
+  // ✅ NOW safe to conditionally render
+  if (pathname === "/") return null;
 
   const mainLinks = [
     { name: "Dashboard", href: "/dashboard" },

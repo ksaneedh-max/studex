@@ -14,85 +14,90 @@ export default function AuthProvider({ children }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const {
-    setData,
-    setLoading,
-  } = useAppStore();
+  const { setData, setLoading } = useAppStore();
 
-  const [loading, setPageLoading] = useState(true);
+  // ✅ NEW: readiness state (prevents premature redirect)
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const savedData = getData();
-    const session_id = localStorage.getItem("session_id");
-    const lastFetch = getLastFetch();
+    const init = async () => {
+      const savedData = getData();
+      const session_id = localStorage.getItem("session_id");
+      const lastFetch = getLastFetch();
 
-    const isLoggedIn = savedData && session_id;
+      // 🔥 session_id is source of truth
+      const isLoggedIn = !!session_id;
 
-    // =========================
-    // 🔹 Restore state
-    // =========================
-    if (isLoggedIn) {
-      setData(savedData);
+      // =========================
+      // 🔹 Restore state
+      // =========================
+      if (isLoggedIn && savedData) {
+        setData(savedData);
+      }
 
-      // 🔥 AUTO REFRESH (session_id based)
-      const now = Date.now();
-      const isStale =
-        !lastFetch || now - lastFetch > 2 * 60 * 1000; // 2 mins
+      // =========================
+      // 🔥 AUTO REFRESH
+      // =========================
+      if (isLoggedIn) {
+        const now = Date.now();
+        const isStale =
+          !lastFetch || now - lastFetch > 2 * 60 * 1000; // 2 mins
 
-      if (isStale) {
-        (async () => {
+        if (isStale) {
           try {
             setLoading(true);
 
             const res = await loginUser({ session_id });
 
-            if (!res || !res.success) {
-              throw new Error("Session expired");
-            }
+            if (res?.success) {
+              if (res?.meta?.relogin) {
+                console.log("🔐 Auto: Re-logged in (session expired)");
+              } else {
+                console.log("🔄 Auto: Session reused");
+              }
 
-            // 🔥 NEW: CONSOLE MESSAGE
-            if (res?.meta?.relogin) {
-              console.log("🔐 Auto: Re-logged in (session expired)");
+              setData(res.data);
+              saveData(res.data);
             } else {
-              console.log("🔄 Auto: Session reused");
+              throw new Error("Session invalid");
             }
 
-            setData(res.data);
-            saveData(res.data);
-
-          } catch {
-            // 🔥 if refresh fails → logout
-            console.log("❌ Auto refresh failed → logging out");
-
-            localStorage.removeItem("session_id");
-            router.replace("/");
+          } catch (err) {
+            // ❗ DO NOT logout immediately
+            console.log("⚠️ Refresh failed, keeping session");
           } finally {
             setLoading(false);
           }
-        })();
+        }
       }
-    }
 
-    // =========================
-    // 🔥 ROUTE CONTROL
-    // =========================
-    const isApiRoute = pathname.startsWith("/api");
+      // =========================
+      // 🔐 ROUTE CONTROL (AFTER CHECK)
+      // =========================
+      const isApiRoute = pathname.startsWith("/api");
 
-    if (!isLoggedIn && pathname !== "/" && !isApiRoute) {
-      router.replace("/");
-    }
+      if (!isLoggedIn && pathname !== "/" && !isApiRoute) {
+        router.replace("/");
+      }
 
-    if (isLoggedIn && pathname === "/") {
-      router.replace("/dashboard");
-    }
+      if (isLoggedIn && pathname === "/") {
+        router.replace("/dashboard");
+      }
 
-    setPageLoading(false);
+      // ✅ mark ready AFTER everything
+      setIsReady(true);
+    };
+
+    init();
   }, [pathname, router, setData, setLoading]);
 
-  if (loading) {
+  // =========================
+  // ⏳ BLOCK UI UNTIL READY
+  // =========================
+  if (!isReady) {
     return (
       <div className="flex items-center justify-center h-screen">
-        Loading...
+        Checking session...
       </div>
     );
   }
