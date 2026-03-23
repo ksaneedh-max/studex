@@ -16,15 +16,16 @@ export default function MobileTimetable({
   overrides,
   handleOverride,
   subjects,
+
+  // 🔥 NEW PROPS (from hook)
+  dragX,
+  isDragging,
+  handleTouchStart,
+  handleTouchMove,
+  handleTouchEnd,
 }) {
-  // ✅ SAFETY: prevent crash
+  // ✅ SAFETY
   if (!days || days.length === 0) return null;
-
-  const currentDayData = days[activeDayIndex];
-  if (!currentDayData) return null;
-
-  const [day, periods] = currentDayData;
-  const isToday = day === todayKey;
 
   return (
     <div className="md:hidden space-y-4">
@@ -52,45 +53,72 @@ export default function MobileTimetable({
         })}
       </div>
 
-      {/* 📅 DAY CARD */}
-      <Card className={isToday ? "ring-2 ring-yellow-400" : ""}>
-        <SectionTitle>
-          {day} {isToday && "🔥"}
-        </SectionTitle>
-
-        {/* 📚 PERIOD LIST */}
-        <div className="space-y-3">
-          {filterPeriods(periods).map(([period, value]) => {
-            const overrideKey = `${day}-${period}`;
+      {/* 📱 SWIPE CONTAINER */}
+      <div
+        onTouchStart={(e) => {
+          if (e.target.closest("select")) return;
+          handleTouchStart(e);
+        }}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={(e) => {
+          if (e.target.closest("select")) return;
+          handleTouchEnd(e);
+        }}
+        className="overflow-hidden"
+      >
+        {/* 🎬 SLIDER */}
+        <div
+          className={`flex ${
+            isDragging ? "" : "transition-transform duration-300 ease-out"
+          }`}
+          style={{
+            transform: `translateX(calc(-${activeDayIndex * 100}% + ${dragX}px))`,
+          }}
+        >
+          {days.map(([day, periods]) => {
+            const isToday = day === todayKey;
 
             return (
-              <PeriodCard
-                key={period}
-                period={period}
-                value={value}
-                subject={findSubject(value)}
-                isCurrent={isToday && period === currentPeriod}
-                currentRef={currentRef}
+              <div key={day} className="min-w-full px-1">
+                <Card className={isToday ? "ring-2 ring-yellow-400" : ""}>
+                  <SectionTitle>
+                    {day} {isToday && "🔥"}
+                  </SectionTitle>
 
-                // ✅ EDITING PROPS
-                isEditing={isEditing}
-                day={day}
-                subjects={subjects}
+                  {/* 📚 PERIOD LIST */}
+                  <div className="space-y-3">
+                    {filterPeriods(periods).map(([period, value]) => {
+                      const overrideKey = `${day}-${period}`;
 
-                // ✅ SAFE override handling
-                override={
-                  overrides && overrideKey in overrides
-                    ? overrides[overrideKey]
-                    : undefined
-                }
-
-                onOverride={handleOverride}
-              />
+                      return (
+                        <PeriodCard
+                          key={period}
+                          period={period}
+                          value={value}
+                          subject={findSubject(value)}
+                          isCurrent={
+                            isToday && period === currentPeriod
+                          }
+                          currentRef={currentRef}
+                          isEditing={isEditing}
+                          day={day}
+                          subjects={subjects}
+                          override={
+                            overrides && overrideKey in overrides
+                              ? overrides[overrideKey]
+                              : undefined
+                          }
+                          onOverride={handleOverride}
+                        />
+                      );
+                    })}
+                  </div>
+                </Card>
+              </div>
             );
           })}
         </div>
-      </Card>
-
+      </div>
     </div>
   );
 }
