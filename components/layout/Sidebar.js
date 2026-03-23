@@ -12,14 +12,11 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // ✅ Hooks first
+  // ✅ Hooks first (DO NOT MOVE)
   const [open, setOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const { setData, setLoading, loading, clearAll } = useAppStore();
-
-  // ✅ Conditional render
-  if (pathname === "/") return null;
 
   const mainLinks = [
     { name: "Dashboard", href: "/dashboard" },
@@ -109,44 +106,47 @@ export default function Sidebar() {
   };
 
   const renderLink = (link) => {
-  const active = pathname.startsWith(link.href);
-  const Icon = link.icon;
+    const active = pathname.startsWith(link.href);
+    const Icon = link.icon;
 
-  return (
-    <Link
-      key={link.href}
-      href={link.href}
-      onClick={() => setOpen(false)}
-      className={`
-        flex items-center
-        px-3 py-2 rounded-lg text-sm font-medium
-        transition-all
-        ${
-          active
-            ? "bg-black text-white"
-            : "text-gray-600 hover:bg-gray-100"
-        }
-      `}
-    >
-      {/* TEXT + ICON TOGETHER */}
-      <div className="flex items-center gap-2">
-        <span>{link.name}</span>
+    return (
+      <Link
+        key={link.href}
+        href={link.href}
+        onClick={() => setOpen(false)}
+        className={`
+          flex items-center
+          px-3 py-2 rounded-lg text-sm font-medium
+          transition-all
+          ${
+            active
+              ? "bg-black text-white"
+              : "text-gray-600 hover:bg-gray-100"
+          }
+        `}
+      >
+        {/* TEXT + ICON */}
+        <div className="flex items-center gap-2">
+          <span>{link.name}</span>
 
-        {Icon && (
-          <Icon
-            size={16}
-            className={active ? "text-white" : "text-gray-400"}
-          />
-        )}
-      </div>
+          {Icon && (
+            <Icon
+              size={16}
+              className={active ? "text-white" : "text-gray-400"}
+            />
+          )}
+        </div>
 
-      {/* OPTIONAL: keep dot at far right */}
-      <div className="ml-auto">
-        {active && <span className="text-xs">●</span>}
-      </div>
-    </Link>
-  );
-};
+        {/* ACTIVE DOT */}
+        <div className="ml-auto">
+          {active && <span className="text-xs">●</span>}
+        </div>
+      </Link>
+    );
+  };
+
+  // ✅ FIXED: Conditional render AFTER hooks
+  if (pathname === "/") return null;
 
   return (
     <>
