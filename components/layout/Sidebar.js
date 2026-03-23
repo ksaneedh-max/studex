@@ -4,28 +4,20 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { loginUser } from "@/lib/api";
-import {
-  saveData,
-  clearStorage,
-} from "@/lib/storage";
+import { saveData, clearStorage } from "@/lib/storage";
 import { useState, useEffect } from "react";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // ✅ ALWAYS declare hooks first
+  // ✅ Hooks first
   const [open, setOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const {
-    setData,
-    setLoading,
-    loading,
-    clearAll,
-  } = useAppStore();
+  const { setData, setLoading, loading, clearAll } = useAppStore();
 
-  // ✅ NOW safe to conditionally render
+  // ✅ Conditional render
   if (pathname === "/") return null;
 
   const mainLinks = [
@@ -42,10 +34,11 @@ export default function Sidebar() {
   ];
 
   useEffect(() => {
-    const openSidebar = () => setOpen(true);
-    document.addEventListener("toggle-sidebar", openSidebar);
+    const toggleSidebar = () => setOpen((prev) => !prev);
+
+    document.addEventListener("toggle-sidebar", toggleSidebar);
     return () => {
-      document.removeEventListener("toggle-sidebar", openSidebar);
+      document.removeEventListener("toggle-sidebar", toggleSidebar);
     };
   }, []);
 
@@ -114,7 +107,7 @@ export default function Sidebar() {
   };
 
   const renderLink = (link) => {
-    const active = pathname === link.href;
+    const active = pathname.startsWith(link.href);
 
     return (
       <Link
@@ -127,8 +120,8 @@ export default function Sidebar() {
           transition-all
           ${
             active
-              ? "bg-blue-500 text-white shadow-sm"
-              : "text-gray-700 hover:bg-gray-100"
+              ? "bg-black text-white"
+              : "text-gray-600 hover:bg-gray-100"
           }
         `}
       >
@@ -144,71 +137,82 @@ export default function Sidebar() {
       {open && (
         <div
           onClick={() => setOpen(false)}
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
+          className="fixed inset-0 bg-black/30 z-40 md:hidden"
         />
       )}
 
       {/* Sidebar */}
       <div
-        className={`fixed md:static top-0 left-0 h-full w-64 bg-white border-r flex flex-col z-50 transform transition-transform duration-300 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0`}
+        className={`
+          fixed md:static top-0 left-0 h-full w-64
+          bg-white flex flex-col z-50
+          transform transition-transform duration-300
+          shadow-xl
+          ${open ? "translate-x-0" : "-translate-x-full"}
+          md:translate-x-0
+        `}
       >
         {/* Header */}
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-bold tracking-tight">
+        <div className="px-5 py-4">
+          <h2 className="text-lg font-semibold tracking-tight">
             Academia DeX
           </h2>
         </div>
 
         {/* Links */}
-        <div className="flex flex-col p-3 flex-1 space-y-4 pt-6">
+        <div className="flex flex-col px-3 flex-1 space-y-6 pt-4">
           <div>
-            <p className="text-xs text-gray-400 mb-1">MAIN</p>
-            {mainLinks.map(renderLink)}
+            <p className="text-xs text-gray-400 mb-2 px-2">MAIN</p>
+            <div className="space-y-1">{mainLinks.map(renderLink)}</div>
           </div>
 
           <div>
-            <p className="text-xs text-gray-400 mb-1">TOOLS</p>
-            {toolLinks.map(renderLink)}
+            <p className="text-xs text-gray-400 mb-2 px-2">TOOLS</p>
+            <div className="space-y-1">{toolLinks.map(renderLink)}</div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t space-y-2 pb-20 md:pb-3 bg-white">
+        <div className="p-3 space-y-2 pb-20 md:pb-3">
           <button
             onClick={handleRefresh}
             disabled={loading}
-            className="w-full bg-green-500 text-white py-2 rounded"
+            className="
+              w-full py-2 rounded-lg text-sm
+              bg-black text-white
+              active:scale-95 transition
+            "
           >
-            {loading ? "Refreshing..." : "🔄 Refresh"}
+            {loading ? "Refreshing..." : "Refresh"}
           </button>
 
           <button
             onClick={() => setShowLogoutConfirm(true)}
-            className="w-full bg-red-500 text-white py-2 rounded"
+            className="
+              w-full py-2 rounded-lg text-sm
+              bg-gray-100 text-gray-700
+              active:scale-95 transition
+            "
           >
-            🚪 Logout
+            Logout
           </button>
         </div>
       </div>
 
       {/* Logout Modal */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-[90%] max-w-sm shadow-lg text-center space-y-4">
-            <h2 className="text-lg font-semibold">
-              Confirm Logout
-            </h2>
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-[90%] max-w-sm shadow-xl text-center space-y-4">
+            <h2 className="text-lg font-semibold">Confirm Logout</h2>
 
             <p className="text-sm text-gray-500">
               Are you sure you want to logout?
             </p>
 
-            <div className="flex gap-3 justify-center">
+            <div className="flex gap-3">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                className="flex-1 py-2 rounded-lg bg-gray-100"
               >
                 Cancel
               </button>
@@ -218,7 +222,7 @@ export default function Sidebar() {
                   setShowLogoutConfirm(false);
                   handleLogout();
                 }}
-                className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"
+                className="flex-1 py-2 rounded-lg bg-black text-white"
               >
                 Logout
               </button>
