@@ -275,73 +275,68 @@ export function useTimetableLogic() {
   // =========================
   // SWIPE
   // =========================
-  const [dragX, setDragX] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
+const [dragX, setDragX] = useState(0);
+const [isDragging, setIsDragging] = useState(false);
 
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let touchStartTime = 0;
+// ✅ FIX: persist values across renders
+const touchStartX = useRef(0);
+const touchStartY = useRef(0);
+const touchStartTime = useRef(0);
 
-  const triggerHaptic = () => {
-    if (typeof window !== "undefined" && navigator.vibrate) {
-      navigator.vibrate(10);
-    }
-  };
+const triggerHaptic = () => {
+  if (typeof window !== "undefined" && navigator.vibrate) {
+    navigator.vibrate(10);
+  }
+};
 
-  const handleTouchStart = (e) => {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchStartTime = Date.now();
-    setIsDragging(true);
-  };
+const handleTouchStart = (e) => {
+  touchStartX.current = e.touches[0].clientX;
+  touchStartY.current = e.touches[0].clientY;
+  touchStartTime.current = Date.now();
 
-  const handleTouchMove = (e) => {
+  setIsDragging(true);
+};
+
+const handleTouchMove = (e) => {
   if (!isDragging) return;
 
   const currentX = e.touches[0].clientX;
-  const diff = currentX - touchStartX;
+  const diff = currentX - touchStartX.current;
 
-  // 🔥 smoother drag (less jumpy)
-  setDragX(diff * 0.6);
+  // 🔥 smoother + stable
+  setDragX(diff * 0.7);
 };
 
-  const handleTouchEnd = (e) => {
+const handleTouchEnd = (e) => {
   const touchEndX = e.changedTouches[0].clientX;
   const touchEndY = e.changedTouches[0].clientY;
 
-  const diffX = touchStartX - touchEndX;
-  const diffY = touchStartY - touchEndY;
+  const diffX = touchStartX.current - touchEndX;
+  const diffY = touchStartY.current - touchEndY;
 
-  const time = Date.now() - touchStartTime;
+  const time = Date.now() - touchStartTime.current;
 
   setIsDragging(false);
 
   const absX = Math.abs(diffX);
   const absY = Math.abs(diffY);
 
-  const MIN_DISTANCE = 100;   // swipe distance
-  const MAX_TIME = 500;       // swipe time
-  const MAX_OFF_AXIS = 80;    // vertical tolerance
+  const MIN_DISTANCE = 80;   // 🔥 slightly lower = better feel
+  const MAX_OFF_AXIS = 100;  // allow slight diagonal
 
-  // ❌ ignore vertical scrolls
-  if (absY > MAX_OFF_AXIS) {
+  // ❌ ignore vertical scroll
+  if (absY > absX) {
     setDragX(0);
     return;
   }
 
-  // ❌ ignore slow drags
-  if (time > MAX_TIME) {
-    setDragX(0);
-    return;
-  }
-
-  // 👉 swipe left → next
+  // 👉 NEXT
   if (diffX > MIN_DISTANCE && activeDayIndexState < days.length - 1) {
     _setActiveDayIndex((p) => p + 1);
     triggerHaptic();
   }
 
-  // 👉 swipe right → previous
+  // 👉 PREVIOUS
   else if (diffX < -MIN_DISTANCE && activeDayIndexState > 0) {
     _setActiveDayIndex((p) => p - 1);
     triggerHaptic();
