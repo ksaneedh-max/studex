@@ -296,43 +296,59 @@ export function useTimetableLogic() {
   };
 
   const handleTouchMove = (e) => {
-    if (!isDragging) return;
-    const currentX = e.touches[0].clientX;
-    setDragX(currentX - touchStartX);
-  };
+  if (!isDragging) return;
+
+  const currentX = e.touches[0].clientX;
+  const diff = currentX - touchStartX;
+
+  // 🔥 smoother drag (less jumpy)
+  setDragX(diff * 0.6);
+};
 
   const handleTouchEnd = (e) => {
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
+  const touchEndX = e.changedTouches[0].clientX;
+  const touchEndY = e.changedTouches[0].clientY;
 
-    const diffX = touchStartX - touchEndX;
-    const diffY = touchStartY - touchEndY;
+  const diffX = touchStartX - touchEndX;
+  const diffY = touchStartY - touchEndY;
 
-    const time = Date.now() - touchStartTime;
+  const time = Date.now() - touchStartTime;
 
-    setIsDragging(false);
+  setIsDragging(false);
 
-    if (Math.abs(diffX) < Math.abs(diffY) * 1.5) {
-      setDragX(0);
-      return;
-    }
+  const absX = Math.abs(diffX);
+  const absY = Math.abs(diffY);
 
-    const velocity = Math.abs(diffX) / time;
+  const MIN_DISTANCE = 100;   // swipe distance
+  const MAX_TIME = 500;       // swipe time
+  const MAX_OFF_AXIS = 80;    // vertical tolerance
 
-    if ((Math.abs(diffX) > 80 && time < 400) || velocity > 0.5) {
-      if (diffX > 0 && activeDayIndexState < days.length - 1) {
-        _setActiveDayIndex((p) => p + 1);
-        triggerHaptic();
-      }
-
-      if (diffX < 0 && activeDayIndexState > 0) {
-        _setActiveDayIndex((p) => p - 1);
-        triggerHaptic();
-      }
-    }
-
+  // ❌ ignore vertical scrolls
+  if (absY > MAX_OFF_AXIS) {
     setDragX(0);
-  };
+    return;
+  }
+
+  // ❌ ignore slow drags
+  if (time > MAX_TIME) {
+    setDragX(0);
+    return;
+  }
+
+  // 👉 swipe left → next
+  if (diffX > MIN_DISTANCE && activeDayIndexState < days.length - 1) {
+    _setActiveDayIndex((p) => p + 1);
+    triggerHaptic();
+  }
+
+  // 👉 swipe right → previous
+  else if (diffX < -MIN_DISTANCE && activeDayIndexState > 0) {
+    _setActiveDayIndex((p) => p - 1);
+    triggerHaptic();
+  }
+
+  setDragX(0);
+};
 
   // =========================
   // REFRESH WARNING
