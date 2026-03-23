@@ -22,11 +22,22 @@ export default function Timetable() {
     overrides,
     handleOverride,
     handleResetAll,
+    handleDone, // ✅ NEW
     findSubject,
     subjectColorMap,
     currentRef,
+
+    // 🔥 SWIPE
     handleTouchStart,
+    handleTouchMove,
     handleTouchEnd,
+    dragX,
+    isDragging,
+
+    // 🔥 MODAL CONTROL
+    showLeaveModal,
+    handleDiscard,
+    handleStay,
   } = useTimetableLogic();
 
   if (!data) {
@@ -59,7 +70,7 @@ export default function Timetable() {
         <div className="flex gap-2">
           {isEditing && (
             <button
-              onClick={handleResetAll}
+              onClick={handleResetAll} // ✅ no confirm needed
               className="px-3 py-1.5 text-sm rounded-lg border bg-red-50 text-red-600 hover:bg-red-100"
             >
               Reset All
@@ -67,7 +78,13 @@ export default function Timetable() {
           )}
 
           <button
-            onClick={() => setIsEditing((p) => !p)}
+            onClick={() => {
+              if (isEditing) {
+                handleDone(); // ✅ no modal
+              } else {
+                setIsEditing(true);
+              }
+            }}
             className={`px-3 py-1.5 text-sm rounded-lg border transition ${
               isEditing
                 ? "bg-black text-white"
@@ -79,7 +96,18 @@ export default function Timetable() {
         </div>
       </div>
 
-      <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      {/* 📱 SWIPE CONTAINER */}
+      <div
+        onTouchStart={(e) => {
+          if (e.target.closest("select")) return;
+          handleTouchStart(e);
+        }}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={(e) => {
+          if (e.target.closest("select")) return;
+          handleTouchEnd(e);
+        }}
+      >
         {!todayKey && (
           <Card className="mb-4">
             <p className="text-gray-500 text-center">
@@ -91,7 +119,7 @@ export default function Timetable() {
         <MobileTimetable
           days={days}
           activeDayIndex={activeDayIndex}
-          setActiveDayIndex={setActiveDayIndex}
+          setActiveDayIndex={setActiveDayIndex} // ✅ safe internally
           todayKey={todayKey}
           currentPeriod={currentPeriod}
           findSubject={findSubject}
@@ -101,6 +129,13 @@ export default function Timetable() {
           handleOverride={handleOverride}
           subjects={subjects}
           subjectColorMap={subjectColorMap}
+
+          // 🔥 SWIPE PROPS
+          dragX={dragX}
+          isDragging={isDragging}
+          handleTouchStart={handleTouchStart}
+          handleTouchMove={handleTouchMove}
+          handleTouchEnd={handleTouchEnd}
         />
 
         <DesktopTimetable
@@ -116,6 +151,37 @@ export default function Timetable() {
           subjectColorMap={subjectColorMap}
         />
       </div>
+
+      {/* 🔥 GLOBAL MODAL */}
+      {showLeaveModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-5 rounded-xl w-80">
+            <h2 className="text-lg font-semibold mb-2">
+              Unsaved Changes
+            </h2>
+
+            <p className="text-sm text-gray-600 mb-4">
+              You have unsaved changes. Discard them?
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={handleStay}
+                className="px-3 py-1"
+              >
+                Stay
+              </button>
+
+              <button
+                onClick={handleDiscard}
+                className="bg-red-500 text-white px-3 py-1 rounded"
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
