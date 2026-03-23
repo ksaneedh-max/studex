@@ -22,7 +22,7 @@ export default function Timetable() {
     overrides,
     handleOverride,
     handleResetAll,
-    handleDone, // ✅ NEW
+    handleDone,
     findSubject,
     subjectColorMap,
     currentRef,
@@ -34,7 +34,10 @@ export default function Timetable() {
     dragX,
     isDragging,
 
-    // 🔥 MODAL CONTROL
+    // 🔥 NAVIGATION (for future use in nav bars)
+    safePush,
+
+    // 🔥 MODAL
     showLeaveModal,
     handleDiscard,
     handleStay,
@@ -46,6 +49,7 @@ export default function Timetable() {
 
   return (
     <div className="p-4 md:p-6 bg-gray-100 min-h-screen">
+      {/* HEADER */}
       <div className="flex justify-between items-start mb-6">
         <div>
           <h1 className="text-xl md:text-2xl font-bold">
@@ -67,10 +71,11 @@ export default function Timetable() {
           </div>
         </div>
 
+        {/* ACTION BUTTONS */}
         <div className="flex gap-2">
           {isEditing && (
             <button
-              onClick={handleResetAll} // ✅ no confirm needed
+              onClick={handleResetAll}
               className="px-3 py-1.5 text-sm rounded-lg border bg-red-50 text-red-600 hover:bg-red-100"
             >
               Reset All
@@ -78,9 +83,9 @@ export default function Timetable() {
           )}
 
           <button
-            onClick={() => {
+            onClick={async () => {
               if (isEditing) {
-                handleDone(); // ✅ no modal
+                await handleDone(); // ✅ save once + exit edit
               } else {
                 setIsEditing(true);
               }
@@ -119,7 +124,7 @@ export default function Timetable() {
         <MobileTimetable
           days={days}
           activeDayIndex={activeDayIndex}
-          setActiveDayIndex={setActiveDayIndex} // ✅ safe internally
+          setActiveDayIndex={setActiveDayIndex} // ✅ already safe
           todayKey={todayKey}
           currentPeriod={currentPeriod}
           findSubject={findSubject}
@@ -130,7 +135,7 @@ export default function Timetable() {
           subjects={subjects}
           subjectColorMap={subjectColorMap}
 
-          // 🔥 SWIPE PROPS
+          // 🔥 SWIPE
           dragX={dragX}
           isDragging={isDragging}
           handleTouchStart={handleTouchStart}
@@ -152,29 +157,29 @@ export default function Timetable() {
         />
       </div>
 
-      {/* 🔥 GLOBAL MODAL */}
+      {/* 🔥 GLOBAL UNSAVED CHANGES MODAL */}
       {showLeaveModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-5 rounded-xl w-80">
+          <div className="bg-white p-5 rounded-xl w-80 shadow-lg">
             <h2 className="text-lg font-semibold mb-2">
               Unsaved Changes
             </h2>
 
             <p className="text-sm text-gray-600 mb-4">
-              You have unsaved changes. Discard them?
+              You have unsaved changes. Do you want to discard them?
             </p>
 
             <div className="flex justify-end gap-2">
               <button
                 onClick={handleStay}
-                className="px-3 py-1"
+                className="px-3 py-1 rounded hover:bg-gray-100"
               >
                 Stay
               </button>
 
               <button
                 onClick={handleDiscard}
-                className="bg-red-500 text-white px-3 py-1 rounded"
+                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
               >
                 Discard
               </button>
