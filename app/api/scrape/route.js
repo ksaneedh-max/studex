@@ -1,10 +1,12 @@
 import { normalizeData } from "@/lib/normalize";
-import { redis } from "@/lib/redis";
+import { redis, systemRedis } from "@/lib/redis";
 import { nanoid } from "nanoid";
 
 export async function POST(req) {
   try {
-    // 🔐 Parse request safely
+    // =========================
+    // 🔐 SAFE BODY PARSE
+    // =========================
     let body;
     try {
       body = await req.json();
@@ -18,7 +20,7 @@ export async function POST(req) {
     const { email, password, session_data, session_id } = body || {};
 
     // =========================
-    // 🔥 STEP 1: GET CREDS FROM REDIS
+    // 🔥 STEP 1: SESSION FETCH
     // =========================
     let creds = null;
 
@@ -34,13 +36,13 @@ export async function POST(req) {
     }
 
     // =========================
-    // 🔥 STEP 2: RESOLVE FINAL VALUES
+    // 🔥 STEP 2: FINAL VALUES
     // =========================
-    const finalEmail = email || creds?.email;
-    const finalPassword = password || creds?.password;
-    const finalSession = session_data || creds?.session_data;
+    const finalEmailRaw = email ?? creds?.email;
+    const finalPassword = password ?? creds?.password;
+    const finalSession = session_data ?? creds?.session_data;
 
-    if (!finalEmail || !finalPassword) {
+    if (!finalEmailRaw || !finalPassword) {
       return Response.json({
         success: false,
         message: "Email and password are required",
@@ -50,11 +52,11 @@ export async function POST(req) {
     const previousDigest = finalSession?.digest || null;
 
     // =========================
-    // 🔹 Helper to call external API
+    // 🔹 API CALL HELPER
     // =========================
     const callAPI = async (useSession = true) => {
       const requestBody = {
-        email: finalEmail,
+        email: finalEmailRaw,
         password: finalPassword,
         ...(useSession &&
           finalSession &&
@@ -94,7 +96,7 @@ export async function POST(req) {
     let reused = false;
 
     // =========================
-    // 🔹 STEP 3: Smart reuse (FIXED)
+    // 🔹 STEP 3: REUSE SESSION
     // =========================
     if (finalSession && Object.keys(finalSession).length > 0) {
       try {
@@ -106,7 +108,7 @@ export async function POST(req) {
     }
 
     // =========================
-    // 🔹 STEP 4: Fallback login
+    // 🔹 STEP 4: FALLBACK LOGIN
     // =========================
     if (!data) {
       try {
@@ -157,7 +159,7 @@ export async function POST(req) {
     // 🔥 STEP 5: SESSION STORAGE
     // =========================
     const newSessionId = session_id || nanoid();
-    const TTL = 60 * 60 * 24; // 24h
+    const TTL = 60 * 60 * 24;
 
     const shouldWrite = relogin || !session_id;
 
@@ -165,7 +167,7 @@ export async function POST(req) {
       await redis.set(
         newSessionId,
         {
-          email: finalEmail,
+          email: finalEmailRaw,
           password: finalPassword,
           session_data: data.session_data,
         },
@@ -178,22 +180,64 @@ export async function POST(req) {
     }
 
     // =========================
-    // 🔥 STEP 6: OPTIMIZED ANALYTICS
+    // 🔥 STEP 6: ANALYTICS (FINAL OPTIMIZED)
     // =========================
-    const trackKey = `track:${newSessionId}`;
-    const alreadyTracked = await redis.get(trackKey);
 
-    if (!alreadyTracked) {
-      await redis.set(trackKey, "1", { ex: 600 });
+    let safeEmail = null;
 
-      const now = new Date();
-      const date = now.toISOString().slice(0, 10);
-      const hour = now.getHours();
+    if (typeof finalEmailRaw === "string") {
+      const trimmed = finalEmailRaw.trim();
+      if (trimmed.includes("@")) {
+        safeEmail = trimmed;
+      }
+    }
 
-      const key = `stats:hourly:${date}:${hour}`;
+    if (!safeEmail && typeof creds?.email === "string") {
+      const trimmed = creds.email.trim();
+      if (trimmed.includes("@")) {
+        safeEmail = trimmed;
+      }
+    }
 
-      // 🔥 non-blocking analytics
-      redis.incr(key);
+    if (!safeEmail) {
+      console.error("❌ Invalid email for analytics:", finalEmailRaw);
+    }
+
+    const name =
+      data?.attendance?.student_info?.name ||
+      safeEmail ||
+      "Unknown";
+
+    const safeName = String(name).trim();
+
+    const now = new Date(
+      new Date().toLocaleString("en-US", {
+        timeZone: "Asia/Kolkata",
+      })
+    );
+
+    const date = now.toISOString().slice(0, 10);
+    const hour = now.getHours();
+
+    const analyticsKey = `hourly:users:${date}:${hour}`;
+
+    if (safeEmail) {
+      // ✅ Correct hset format
+      await systemRedis.hset(analyticsKey, {
+        [safeEmail]: safeName,
+      });
+
+      // ✅ Set TTL ONLY if not already set (1 year)
+      const ttl = await systemRedis.ttl(analyticsKey);
+
+      if (ttl === -1) {
+        await systemRedis.expire(
+          analyticsKey,
+          60 * 60 * 24 * 365 // 1 year
+        );
+      }
+
+      console.log("📊 Analytics stored:", analyticsKey, safeEmail);
     }
 
     // =========================

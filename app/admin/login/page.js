@@ -9,8 +9,20 @@ export default function AdminLogin() {
   const [id, setId] = useState("");
   const [password, setPassword] = useState("");
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const handleLogin = async () => {
+    setError("");
+
+    if (!id || !password) {
+      setError("Please enter ID and password");
+      return;
+    }
+
     try {
+      setLoading(true);
+
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: {
@@ -21,16 +33,19 @@ export default function AdminLogin() {
 
       const data = await res.json();
 
-      if (!data.success) {
-        throw new Error("Invalid credentials");
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Invalid credentials");
       }
 
+      // 🔐 store auth flag
       localStorage.setItem("admin_auth", "true");
 
       router.push("/admin");
 
     } catch (err) {
-      alert(err.message);
+      setError(err.message || "Login failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -42,6 +57,13 @@ export default function AdminLogin() {
         <h1 className="text-xl font-bold text-center">
           Admin Login
         </h1>
+
+        {/* ERROR */}
+        {error && (
+          <div className="bg-red-100 text-red-600 p-2 rounded text-sm">
+            {error}
+          </div>
+        )}
 
         <input
           className="border p-2 w-full rounded"
@@ -60,9 +82,14 @@ export default function AdminLogin() {
 
         <button
           onClick={handleLogin}
-          className="bg-blue-500 text-white w-full py-2 rounded"
+          disabled={loading}
+          className={`w-full py-2 rounded text-white ${
+            loading
+              ? "bg-gray-400"
+              : "bg-blue-500 hover:bg-blue-600"
+          }`}
         >
-          Login
+          {loading ? "Logging in..." : "Login"}
         </button>
 
       </div>
