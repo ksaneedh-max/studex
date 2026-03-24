@@ -84,8 +84,8 @@ export async function POST(req) {
       if (!res.ok || data?.detail) {
         throw new Error(
           data?.detail ||
-          data?.message ||
-          "Invalid email or password"
+            data?.message ||
+            "Invalid email or password"
         );
       }
 
@@ -180,9 +180,8 @@ export async function POST(req) {
     }
 
     // =========================
-    // 🔥 STEP 6: ANALYTICS (FINAL OPTIMIZED)
+    // 🔥 STEP 6: ACTIVE ANALYTICS
     // =========================
-
     let safeEmail = null;
 
     if (typeof finalEmailRaw === "string") {
@@ -220,24 +219,35 @@ export async function POST(req) {
     const hour = now.getHours();
 
     const analyticsKey = `hourly:users:${date}:${hour}`;
+    const trackKey = `track:hourly:${date}:${hour}:${safeEmail}`;
 
     if (safeEmail) {
-      // ✅ Correct hset format
-      await systemRedis.hset(analyticsKey, {
-        [safeEmail]: safeName,
-      });
+      // Only count once per user per hour
+      const alreadyTracked = await systemRedis.get(trackKey);
 
-      // ✅ Set TTL ONLY if not already set (1 year)
-      const ttl = await systemRedis.ttl(analyticsKey);
+      if (!alreadyTracked) {
+        await systemRedis.hset(analyticsKey, {
+          [safeEmail]: safeName,
+        });
 
-      if (ttl === -1) {
-        await systemRedis.expire(
-          analyticsKey,
-          60 * 60 * 24 * 365 // 1 year
-        );
+        // Set analytics TTL only once (1 year)
+        const ttl = await systemRedis.ttl(analyticsKey);
+        if (ttl === -1) {
+          await systemRedis.expire(
+            analyticsKey,
+            60 * 60 * 24 * 365
+          );
+        }
+
+        // Mark this user as tracked for this hour
+        await systemRedis.set(trackKey, "1", {
+          ex: 60 * 60,
+        });
+
+        console.log("📊 Tracked active user:", safeEmail);
+      } else {
+        console.log("⏭️ Already tracked this hour:", safeEmail);
       }
-
-      console.log("📊 Analytics stored:", analyticsKey, safeEmail);
     }
 
     // =========================
