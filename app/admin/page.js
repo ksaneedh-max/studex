@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   LineChart,
   Line,
@@ -12,6 +12,9 @@ import {
 } from "recharts";
 
 export default function AdminPage() {
+  // =========================
+  // 🧠 IST DATE HELPER
+  // =========================
   const getISTDate = () => {
     return new Date(
       new Date().toLocaleString("en-US", {
@@ -23,16 +26,17 @@ export default function AdminPage() {
   };
 
   const [data, setData] = useState([]);
-
-  // ✅ FIXED: Use IST date instead of UTC
   const [date, setDate] = useState(getISTDate());
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [authorized, setAuthorized] = useState(false);
 
+  // 🧠 CACHE
+  const cacheRef = useRef({});
+
   // =========================
-  // 🔐 PROTECT ROUTE
+  // 🔐 AUTH CHECK
   // =========================
   useEffect(() => {
     const auth = localStorage.getItem("admin_auth");
@@ -45,9 +49,15 @@ export default function AdminPage() {
   }, []);
 
   // =========================
-  // 🔄 FETCH DATA
+  // 🔄 FETCH (SMART + CACHE)
   // =========================
   const fetchData = async (selectedDate) => {
+    if (cacheRef.current[selectedDate]) {
+      setData(cacheRef.current[selectedDate]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -62,7 +72,11 @@ export default function AdminPage() {
         throw new Error(json.message || "Failed to fetch");
       }
 
-      setData(json.data || []);
+      const result = json.data || [];
+
+      cacheRef.current[selectedDate] = result;
+
+      setData(result);
     } catch (err) {
       console.error("Admin fetch error:", err);
       setError(err.message || "Failed to load data");
@@ -73,9 +87,7 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    if (authorized) {
-      fetchData(date);
-    }
+    if (authorized) fetchData(date);
   }, [date, authorized]);
 
   // =========================
@@ -87,26 +99,27 @@ export default function AdminPage() {
     ? Math.max(...data.map((d) => d.count || 0))
     : 0;
 
-  const avg = data.length ? Math.round(total / data.length) : 0;
+  const avg = data.length
+    ? Math.round(total / data.length)
+    : 0;
 
-  // Prevent flicker
   if (!authorized) return null;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 space-y-6">
+    <div className="min-h-screen bg-gray-100 p-4 md:p-6 space-y-6">
 
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <h1 className="text-2xl font-bold">
+      <div className="bg-white p-4 rounded-xl shadow flex flex-col md:flex-row justify-between items-center gap-3">
+        <h1 className="text-xl md:text-2xl font-bold">
           📊 Admin Analytics
         </h1>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full md:w-auto">
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="border px-3 py-2 rounded"
+            className="border px-3 py-2 rounded w-full md:w-auto"
           />
 
           <button
@@ -114,7 +127,7 @@ export default function AdminPage() {
               localStorage.removeItem("admin_auth");
               window.location.href = "/admin/login";
             }}
-            className="bg-red-500 text-white px-4 py-2 rounded"
+            className="bg-red-500 text-white px-4 py-2 rounded w-full md:w-auto"
           >
             Logout
           </button>
@@ -136,75 +149,83 @@ export default function AdminPage() {
       </div>
 
       {/* GRAPH */}
-      <div className="bg-white p-6 rounded-xl shadow">
+      <div className="bg-white p-4 md:p-6 rounded-xl shadow">
         <h2 className="text-lg font-semibold mb-4">
           Hourly Activity
         </h2>
 
         {loading ? (
-          <div className="h-[300px] flex items-center justify-center">
-            Loading...
+          <div className="h-[250px] md:h-[320px] flex items-center justify-center text-gray-500">
+            Loading chart...
           </div>
         ) : data.length === 0 ? (
-          <div className="h-[300px] flex items-center justify-center text-gray-500">
+          <div className="h-[250px] md:h-[320px] flex items-center justify-center text-gray-500">
             No data available
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="hour"
-                tickFormatter={(h) => `${h}:00`}
-              />
-              <YAxis allowDecimals={false} />
-              <Tooltip
-                formatter={(value) => [`${value}`, "Users"]}
-                labelFormatter={(label) => `${label}:00`}
-              />
-              <Line
-                type="monotone"
-                dataKey="count"
-                strokeWidth={2}
-                dot
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="w-full h-[250px] md:h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="hour"
+                  tickFormatter={(h) => `${h}:00`}
+                  fontSize={12}
+                />
+                <YAxis allowDecimals={false} />
+                <Tooltip
+                  formatter={(value) => [`${value}`, "Users"]}
+                  labelFormatter={(label) => `${label}:00`}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         )}
       </div>
 
       {/* USERS LIST */}
-      <div className="bg-white p-6 rounded-xl shadow">
+      <div className="bg-white p-4 md:p-6 rounded-xl shadow">
         <h2 className="text-lg font-semibold mb-4">
           Users by Hour
         </h2>
 
-        {data.map((item) => {
-          const users = Object.values(item.users || {});
+        {loading ? (
+          <div className="text-gray-500">Loading...</div>
+        ) : (
+          data.map((item) => {
+            const users = Object.values(item.users || {});
+            if (users.length === 0) return null;
 
-          if (users.length === 0) return null;
+            return (
+              <div
+                key={item.hour}
+                className="mb-4 border-b pb-3"
+              >
+                <div className="font-semibold text-sm md:text-base mb-2">
+                  {item.hour}:00 • {users.length} users
+                </div>
 
-          return (
-            <div key={item.hour} className="mb-4">
-              <div className="font-semibold mb-1">
-                {item.hour}:00 ({users.length} users)
+                <div className="flex flex-wrap gap-2">
+                  {users.map((name, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-gray-200 px-2 py-1 rounded text-xs md:text-sm"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
               </div>
-
-              <div className="flex flex-wrap gap-2">
-                {users.map((name, idx) => (
-                  <span
-                    key={idx}
-                    className="bg-gray-200 px-2 py-1 rounded text-sm"
-                  >
-                    {name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
-
     </div>
   );
 }
@@ -214,9 +235,13 @@ export default function AdminPage() {
 // =========================
 function StatCard({ title, value }) {
   return (
-    <div className="bg-white p-4 rounded-xl shadow">
-      <div className="text-gray-500 text-sm">{title}</div>
-      <div className="text-xl font-bold">{value}</div>
+    <div className="bg-white p-4 rounded-xl shadow flex flex-col">
+      <div className="text-gray-500 text-xs md:text-sm">
+        {title}
+      </div>
+      <div className="text-lg md:text-xl font-bold">
+        {value}
+      </div>
     </div>
   );
 }
