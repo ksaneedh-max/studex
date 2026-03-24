@@ -12,11 +12,20 @@ import {
 } from "recharts";
 
 export default function AdminPage() {
+  const getISTDate = () => {
+    return new Date(
+      new Date().toLocaleString("en-US", {
+        timeZone: "Asia/Kolkata",
+      })
+    )
+      .toISOString()
+      .slice(0, 10);
+  };
+
   const [data, setData] = useState([]);
 
-  const [date, setDate] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
+  // ✅ FIXED: Use IST date instead of UTC
+  const [date, setDate] = useState(getISTDate());
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -36,7 +45,7 @@ export default function AdminPage() {
   }, []);
 
   // =========================
-  // 🔄 FETCH DATA (ONLY HOURLY)
+  // 🔄 FETCH DATA
   // =========================
   const fetchData = async (selectedDate) => {
     setLoading(true);
@@ -50,7 +59,7 @@ export default function AdminPage() {
       const json = await res.json();
 
       if (!res.ok || !json.success) {
-        throw new Error(json.message);
+        throw new Error(json.message || "Failed to fetch");
       }
 
       setData(json.data || []);
@@ -70,12 +79,12 @@ export default function AdminPage() {
   }, [date, authorized]);
 
   // =========================
-  // 📊 CALCULATIONS (FROM HOURLY ONLY)
+  // 📊 CALCULATIONS
   // =========================
-  const total = data.reduce((a, b) => a + (b.users || 0), 0);
+  const total = data.reduce((a, b) => a + (b.count || 0), 0);
 
   const peak = data.length
-    ? Math.max(...data.map((d) => d.users || 0))
+    ? Math.max(...data.map((d) => d.count || 0))
     : 0;
 
   const avg = data.length ? Math.round(total / data.length) : 0;
@@ -121,8 +130,8 @@ export default function AdminPage() {
 
       {/* STATS */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <StatCard title="Total Requests" value={total} />
-        <StatCard title="Peak Users" value={peak} />
+        <StatCard title="Total Users" value={total} />
+        <StatCard title="Peak Hour Users" value={peak} />
         <StatCard title="Avg / Hour" value={avg} />
       </div>
 
@@ -150,18 +159,50 @@ export default function AdminPage() {
               />
               <YAxis allowDecimals={false} />
               <Tooltip
-                formatter={(value) => [`${value}`, "Requests"]}
+                formatter={(value) => [`${value}`, "Users"]}
                 labelFormatter={(label) => `${label}:00`}
               />
               <Line
                 type="monotone"
-                dataKey="users"
+                dataKey="count"
                 strokeWidth={2}
                 dot
               />
             </LineChart>
           </ResponsiveContainer>
         )}
+      </div>
+
+      {/* USERS LIST */}
+      <div className="bg-white p-6 rounded-xl shadow">
+        <h2 className="text-lg font-semibold mb-4">
+          Users by Hour
+        </h2>
+
+        {data.map((item) => {
+          const users = Object.values(item.users || {});
+
+          if (users.length === 0) return null;
+
+          return (
+            <div key={item.hour} className="mb-4">
+              <div className="font-semibold mb-1">
+                {item.hour}:00 ({users.length} users)
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {users.map((name, idx) => (
+                  <span
+                    key={idx}
+                    className="bg-gray-200 px-2 py-1 rounded text-sm"
+                  >
+                    {name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
     </div>
