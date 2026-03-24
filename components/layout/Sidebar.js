@@ -29,6 +29,7 @@ export default function Sidebar() {
   const toolLinks = [
     { name: "Course List", href: "/subjects" },
     { name: "Skip Planner", href: "/skip-planner" },
+    { name: "SGPA Calculator", href: "/sgpa" },
     { name: "Share", href: "/share", icon: Share2 },
   ];
 
