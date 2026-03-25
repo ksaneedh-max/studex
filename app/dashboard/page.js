@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 
 import Card from "@/components/ui/Card";
 import { User, Mail, Phone } from "lucide-react";
+import { BookOpen, BarChart3, XCircle, CheckCircle } from "lucide-react";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -146,40 +147,87 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-4">
 
         {/* Attendance Graph */}
-        <Card className="p-4 flex flex-col items-center justify-center aspect-square">
-          <p className="text-xs text-gray-500 mb-2">Attendance</p>
+        <Card className="p-4 flex flex-col items-center justify-center aspect-square hover:shadow-md transition">
+          <p className="text-xs text-gray-400 mb-3 uppercase tracking-wide">
+            Attendance
+          </p>
+
           <Circle value={overallAttendance} />
         </Card>
 
         {/* Marks Graph */}
-        <Card className="p-4 flex flex-col items-center justify-center aspect-square">
-          <p className="text-xs text-gray-500 mb-2">Marks</p>
+        <Card className="p-4 flex flex-col items-center justify-center aspect-square hover:shadow-md transition">
+          <p className="text-xs text-gray-400 mb-3 uppercase tracking-wide">
+            Marks
+          </p>
+
           <Circle value={marksSummary.percent} />
         </Card>
 
         {/* Attendance Details */}
-        <Card className="p-4 flex flex-col justify-center aspect-square">
-          <p className="text-xs text-gray-500 mb-2">
-            Attendance Details
+        <Card className="p-4 flex flex-col justify-center aspect-square hover:shadow-md transition">
+
+          <p className="text-xs text-gray-400 mb-3 uppercase tracking-wide">
+            Attendance
           </p>
 
-          <div className="text-sm space-y-1">
-            <p>Present: {round1(totalPresent)}</p>
-            <p>Total: {round1(totalConducted)}</p>
-            <p>Absent: {round1(totalAbsent)}</p>
+          <div className="space-y-3 text-sm">
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-gray-500">
+                <CheckCircle size={14} />
+                <span>Present</span>
+              </div>
+              <span className="font-semibold">
+                {round1(totalPresent)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-gray-500">
+                <BarChart3 size={14} />
+                <span>Total</span>
+              </div>
+              <span className="font-semibold">
+                {round1(totalConducted)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-gray-500">
+                <XCircle size={14} />
+                <span>Absent</span>
+              </div>
+              <span className="font-semibold">
+                {round1(totalAbsent)}
+              </span>
+            </div>
+
           </div>
+
         </Card>
 
         {/* Marks Details */}
-        <Card className="p-4 flex flex-col justify-center aspect-square">
-          <p className="text-xs text-gray-500 mb-2">
-            Marks Details
+        <Card className="p-4 flex flex-col justify-center aspect-square hover:shadow-md transition">
+
+          <p className="text-xs text-gray-400 mb-3 uppercase tracking-wide">
+            Marks
           </p>
 
-          <p className="text-sm">
-            {round1(marksSummary.obtained)} /{" "}
-            {round1(marksSummary.max)}
-          </p>
+          <div className="flex items-center justify-between text-sm">
+
+            <div className="flex items-center gap-2 text-gray-500">
+              <BookOpen size={14} />
+              <span>Score</span>
+            </div>
+
+            <span className="font-semibold">
+              {round1(marksSummary.obtained)} /{" "}
+              {round1(marksSummary.max)}
+            </span>
+
+          </div>
+
         </Card>
 
       </div>
