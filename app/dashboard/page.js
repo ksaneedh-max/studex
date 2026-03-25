@@ -6,6 +6,7 @@ import { getData } from "@/lib/storage";
 import { useRouter } from "next/navigation";
 
 import Card from "@/components/ui/Card";
+import { User, Mail, Phone } from "lucide-react";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -141,27 +142,24 @@ export default function Dashboard() {
         </div>
       </Card>
 
-      {/* 📊 GRAPH ROW */}
+      {/* 📊 GRAPH + DETAILS GRID */}
       <div className="grid grid-cols-2 gap-4">
 
-        <Card className="p-5 flex flex-col items-center">
+        {/* Attendance Graph */}
+        <Card className="p-4 flex flex-col items-center justify-center aspect-square">
           <p className="text-xs text-gray-500 mb-2">Attendance</p>
           <Circle value={overallAttendance} />
         </Card>
 
-        <Card className="p-5 flex flex-col items-center">
+        {/* Marks Graph */}
+        <Card className="p-4 flex flex-col items-center justify-center aspect-square">
           <p className="text-xs text-gray-500 mb-2">Marks</p>
           <Circle value={marksSummary.percent} />
         </Card>
 
-      </div>
-
-      {/* 📋 DETAILS ROW */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
         {/* Attendance Details */}
-        <Card className="p-5">
-          <p className="text-sm text-gray-500 mb-2">
+        <Card className="p-4 flex flex-col justify-center aspect-square">
+          <p className="text-xs text-gray-500 mb-2">
             Attendance Details
           </p>
 
@@ -173,8 +171,8 @@ export default function Dashboard() {
         </Card>
 
         {/* Marks Details */}
-        <Card className="p-5">
-          <p className="text-sm text-gray-500 mb-2">
+        <Card className="p-4 flex flex-col justify-center aspect-square">
+          <p className="text-xs text-gray-500 mb-2">
             Marks Details
           </p>
 
@@ -187,24 +185,86 @@ export default function Dashboard() {
       </div>
 
       {/* 👨‍🏫 FACULTY */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4">
 
-        <Card className="p-5">
-          <p className="text-sm text-gray-500 mb-2">
-            Faculty Advisor
-          </p>
-          <p className="font-semibold">{facultyAdvisor.name || "N/A"}</p>
-          <p className="text-sm text-gray-600">{facultyAdvisor.email}</p>
-          <p className="text-sm text-gray-600">{facultyAdvisor.phone}</p>
+        {/* Faculty Advisor */}
+        <Card className="p-4 flex flex-col justify-between aspect-square">
+
+          {/* Top Row */}
+          <div className="flex items-center gap-3">
+
+            {/* Silhouette Icon */}
+            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+              <User size={18} />
+            </div>
+
+            {/* Name + Role */}
+            <div>
+              <p className="text-xs text-gray-500">
+                Faculty Advisor
+              </p>
+              <p className="font-semibold text-sm">
+                {facultyAdvisor.name || "N/A"}
+              </p>
+            </div>
+
+          </div>
+
+          {/* Bottom Contact */}
+          <div className="text-xs text-gray-600 space-y-1 mt-4">
+
+            <div className="flex items-center gap-2">
+              <Mail size={14} />
+              <span>{facultyAdvisor.email || "N/A"}</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Phone size={14} />
+              <span>{facultyAdvisor.phone || "N/A"}</span>
+            </div>
+
+          </div>
+
         </Card>
 
-        <Card className="p-5">
-          <p className="text-sm text-gray-500 mb-2">
-            Academic Advisor
-          </p>
-          <p className="font-semibold">{academicAdvisor.name || "N/A"}</p>
-          <p className="text-sm text-gray-600">{academicAdvisor.email}</p>
-          <p className="text-sm text-gray-600">{academicAdvisor.phone}</p>
+        {/* Academic Advisor */}
+        <Card className="p-4 flex flex-col justify-between aspect-square">
+
+          {/* Top Row */}
+          <div className="flex items-center gap-3">
+
+            {/* Silhouette Icon */}
+            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+              <User size={18} />
+            </div>
+
+            {/* Name + Role */}
+            <div>
+              <p className="text-xs text-gray-500">
+                Academic Advisor
+              </p>
+              <p className="font-semibold text-sm">
+                {academicAdvisor.name || "N/A"}
+              </p>
+            </div>
+
+          </div>
+
+          {/* Bottom Contact */}
+          <div className="text-xs text-gray-600 space-y-1 mt-4">
+
+            <div className="flex items-center gap-2">
+              <Mail size={14} />
+              <span>{academicAdvisor.email || "N/A"}</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Phone size={14} />
+              <span>{academicAdvisor.phone || "N/A"}</span>
+            </div>
+
+          </div>
+
         </Card>
 
       </div>
