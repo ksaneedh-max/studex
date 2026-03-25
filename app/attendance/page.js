@@ -169,7 +169,7 @@ export default function Attendance() {
           if (percentage < 75) {
             status = "Danger";
             type = "danger";
-          } else if (percentage < 85) {
+          } else if (percentage < 80) {
             status = "Warning";
             type = "warning";
           }
