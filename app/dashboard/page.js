@@ -144,61 +144,63 @@ export default function Dashboard() {
       </Card>
 
       {/* 📊 GRAPH + DETAILS GRID */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3">
 
         {/* Attendance Graph */}
         <Card className="p-4 flex flex-col items-center justify-center aspect-square hover:shadow-md transition">
-          <p className="text-xs text-gray-400 mb-3 uppercase tracking-wide">
+          <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide">
             Attendance
           </p>
-
-          <Circle value={overallAttendance} />
+          <div className="flex-1 flex items-center justify-center">
+            <Circle value={overallAttendance} />
+          </div>
         </Card>
 
         {/* Marks Graph */}
         <Card className="p-4 flex flex-col items-center justify-center aspect-square hover:shadow-md transition">
-          <p className="text-xs text-gray-400 mb-3 uppercase tracking-wide">
+          <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide">
             Marks
           </p>
-
-          <Circle value={marksSummary.percent} />
+          <div className="flex-1 flex items-center justify-center">
+            <Circle value={marksSummary.percent} />
+          </div>
         </Card>
 
         {/* Attendance Details */}
-        <Card className="p-4 flex flex-col justify-center aspect-square hover:shadow-md transition">
+        <Card className="p-3 flex flex-col justify-center aspect-square hover:shadow-md transition">
 
-          <p className="text-xs text-gray-400 mb-3 uppercase tracking-wide">
+          <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide">
             Attendance
           </p>
 
-          <div className="space-y-3 text-sm">
+          <div className="space-y-2 text-sm">
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-gray-500">
-                <CheckCircle size={14} />
+                <CheckCircle size={13} />
                 <span>Present</span>
               </div>
-              <span className="font-semibold">
+              <span className="font-semibold w-[50px] text-right">
                 {round1(totalPresent)}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-gray-500">
-                <BarChart3 size={14} />
+                <BarChart3 size={13} />
                 <span>Total</span>
               </div>
-              <span className="font-semibold">
+              <span className="font-semibold w-[50px] text-right">
                 {round1(totalConducted)}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-gray-500">
-                <XCircle size={14} />
+                <XCircle size={13} />
                 <span>Absent</span>
               </div>
-              <span className="font-semibold">
+              <span className="font-semibold w-[50px] text-right">
                 {round1(totalAbsent)}
               </span>
             </div>
@@ -208,24 +210,22 @@ export default function Dashboard() {
         </Card>
 
         {/* Marks Details */}
-        <Card className="p-4 flex flex-col justify-center aspect-square hover:shadow-md transition">
+        <Card className="p-3 flex flex-col justify-center items-center text-center aspect-square hover:shadow-md transition">
 
-          <p className="text-xs text-gray-400 mb-3 uppercase tracking-wide">
+          <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide">
             Marks
           </p>
 
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
+            <BookOpen size={14} />
+            <span>Score</span>
+          </div>
 
-            <div className="flex items-center gap-2 text-gray-500">
-              <BookOpen size={14} />
-              <span>Score</span>
-            </div>
-
-            <span className="font-semibold">
-              {round1(marksSummary.obtained)} /{" "}
-              {round1(marksSummary.max)}
-            </span>
-
+          {/* 🔥 moved below & centered */}
+          <div className="w-full flex justify-center">
+            <p className="font-semibold text-base text-center">
+              {round1(marksSummary.obtained)} / {round1(marksSummary.max)}
+            </p>
           </div>
 
         </Card>
@@ -233,20 +233,16 @@ export default function Dashboard() {
       </div>
 
       {/* 👨‍🏫 FACULTY */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
 
         {/* Faculty Advisor */}
-        <Card className="p-4 flex flex-col justify-between aspect-square">
+        <Card className="p-4 flex flex-col justify-between hover:shadow-md transition">
 
-          {/* Top Row */}
           <div className="flex items-center gap-3">
-
-            {/* Silhouette Icon */}
             <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
               <User size={18} />
             </div>
 
-            {/* Name + Role */}
             <div>
               <p className="text-xs text-gray-500">
                 Faculty Advisor
@@ -255,11 +251,9 @@ export default function Dashboard() {
                 {facultyAdvisor.name || "N/A"}
               </p>
             </div>
-
           </div>
 
-          {/* Bottom Contact */}
-          <div className="text-xs text-gray-600 space-y-1 mt-4">
+          <div className="mt-3 text-sm text-gray-600 space-y-1">
 
             <div className="flex items-center gap-2">
               <Mail size={14} />
@@ -276,17 +270,13 @@ export default function Dashboard() {
         </Card>
 
         {/* Academic Advisor */}
-        <Card className="p-4 flex flex-col justify-between aspect-square">
+        <Card className="p-4 flex flex-col justify-between hover:shadow-md transition">
 
-          {/* Top Row */}
           <div className="flex items-center gap-3">
-
-            {/* Silhouette Icon */}
             <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
               <User size={18} />
             </div>
 
-            {/* Name + Role */}
             <div>
               <p className="text-xs text-gray-500">
                 Academic Advisor
@@ -295,11 +285,9 @@ export default function Dashboard() {
                 {academicAdvisor.name || "N/A"}
               </p>
             </div>
-
           </div>
 
-          {/* Bottom Contact */}
-          <div className="text-xs text-gray-600 space-y-1 mt-4">
+          <div className="mt-3 text-sm text-gray-600 space-y-1">
 
             <div className="flex items-center gap-2">
               <Mail size={14} />
