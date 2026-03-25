@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 
 // UI
 import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
 
 import PredictModal from "@/components/predict/PredictModal";
 
@@ -163,17 +162,6 @@ export default function Attendance() {
             return improved ? "↑" : "↓";
           };
 
-          let status = "Safe";
-          let type = "safe";
-
-          if (percentage < 75) {
-            status = "Danger";
-            type = "danger";
-          } else if (percentage < 80) {
-            status = "Warning";
-            type = "warning";
-          }
-
           const isTheory =
             c.category === "Theory" || c.id?.includes("Theory");
 
@@ -262,84 +250,66 @@ export default function Attendance() {
               </div>
 
               {/* FOOTER */}
-              <div className="mt-4 flex justify-between items-center">
+              <div className="mt-4 flex justify-end items-center">
 
-                {(() => {
-                  const wasSafe = oldPercentage >= 75;
-                  const isSafe = percentage >= 75;
+              {(() => {
+                const wasSafe = oldPercentage >= 75;
+                const isSafe = percentage >= 75;
 
-                  if (predictedData) {
+                if (predictedData) {
 
-                    if (wasSafe && isSafe) {
-                      const diff = margin - oldMargin;
-                      return (
-                        <div className="text-green-600 font-bold text-sm md:text-base whitespace-nowrap">
-                          Margin: {oldMargin} → {margin} {diff !== 0 && (
-                            <span>
-                              {diff > 0 ? "↑" : "↓"} ({diff > 0 ? "+" : ""}{diff})
-                            </span>
-                          )}
-                        </div>
-                      );
-                    }
-
-                    if (wasSafe && !isSafe) {
-                      const diff = required - oldMargin;
-                      return (
-                        <div className="text-red-600 font-bold text-sm md:text-base whitespace-nowrap">
-                          Margin: {oldMargin} → Required: {required}{" "}
+                  if (wasSafe && isSafe) {
+                    const diff = margin - oldMargin;
+                    return (
+                      <div className="text-green-600 font-bold text-base md:text-lg whitespace-nowrap">
+                        Margin: {oldMargin} → {margin} {diff !== 0 && (
                           <span>
-                            ↓ ({diff > 0 ? "+" : ""}{diff})
+                            {diff > 0 ? "↑" : "↓"} ({diff > 0 ? "+" : ""}{diff})
                           </span>
-                        </div>
-                      );
-                    }
-
-                    if (!wasSafe && isSafe) {
-                      const diff = margin - oldRequired;
-                      return (
-                        <div className="text-green-600 font-bold text-sm md:text-base whitespace-nowrap">
-                          Required: {oldRequired} → Margin: {margin}{" "}
-                          <span>
-                            ↑ ({diff > 0 ? "+" : ""}{diff})
-                          </span>
-                        </div>
-                      );
-                    }
-
-                    if (!wasSafe && !isSafe) {
-                      const diff = required - oldRequired;
-                      const isBetter = diff < 0;
-
-                      return (
-                        <div className={`font-bold text-sm md:text-base whitespace-nowrap ${
-                          isBetter ? "text-green-600" : "text-red-600"
-                        }`}>
-                          Required: {oldRequired} → {required}{" "}
-                          {diff !== 0 && (
-                            <span>
-                              {isBetter ? "↓" : "↑"} ({diff > 0 ? "+" : ""}{diff})
-                            </span>
-                          )}
-                        </div>
-                      );
-                    }
+                        )}
+                      </div>
+                    );
                   }
 
-                  return percentage < 75 ? (
-                    <div className="text-red-600 font-bold text-sm md:text-base">
-                      Required: {required}
-                    </div>
-                  ) : (
-                    <div className="text-green-600 font-bold text-sm md:text-base">
-                      Margin: {margin}
-                    </div>
-                  );
-                })()}
+                  if (wasSafe && !isSafe) {
+                    const diff = required - oldMargin;
+                    return (
+                      <div className="text-red-600 font-bold text-base md:text-lg whitespace-nowrap">
+                        Margin: {oldMargin} → Required: {required}
+                      </div>
+                    );
+                  }
 
-                <Badge text={status} type={type} />
+                  if (!wasSafe && isSafe) {
+                    const diff = margin - oldRequired;
+                    return (
+                      <div className="text-green-600 font-bold text-base md:text-lg whitespace-nowrap">
+                        Required: {oldRequired} → Margin: {margin}
+                      </div>
+                    );
+                  }
 
-              </div>
+                  if (!wasSafe && !isSafe) {
+                    return (
+                      <div className="text-red-600 font-bold text-base md:text-lg whitespace-nowrap">
+                        Required: {oldRequired} → {required}
+                      </div>
+                    );
+                  }
+                }
+
+                return percentage < 75 ? (
+                  <div className="text-red-600 font-bold text-base md:text-lg">
+                    Required: {required}
+                  </div>
+                ) : (
+                  <div className="text-green-600 font-bold text-base md:text-lg">
+                    Margin: {margin}
+                  </div>
+                );
+              })()}
+
+            </div>
 
             </Card>
           );
