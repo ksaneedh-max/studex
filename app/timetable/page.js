@@ -1,11 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { useTimetableLogic } from "@/app/hooks/useTimetable";
 import { useAppStore } from "@/store/useAppStore";
 
 import MobileTimetable from "@/components/timetable/MobileTimetable";
 import DesktopTimetable from "@/components/timetable/DesktopTimetable";
 import Card from "@/components/ui/Card";
+
+// ✅ NEW IMPORT
+import { exportTimetableImage } from "@/app/utils/exportTimetableImage";
+
+// ✅ ICONS
+import { Pencil, Check, Download } from "lucide-react";
 
 export default function Timetable() {
   const {
@@ -36,16 +43,34 @@ export default function Timetable() {
     isDragging,
   } = useTimetableLogic();
 
-  // 🔥 GLOBAL MODAL (from store)
   const {
     showLeaveModal,
     handleDiscardGlobal,
     handleStayGlobal,
   } = useAppStore();
 
+  const [isDownloading, setIsDownloading] = useState(false);
+
   if (!data) {
     return <div className="p-6">Loading...</div>;
   }
+
+  const handleDownload = async () => {
+    try {
+      setIsDownloading(true);
+
+      await exportTimetableImage({
+        days,
+        subjects,
+        overrides,
+        findSubject,
+      });
+    } catch (err) {
+      console.error("Download failed", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="p-4 md:p-6 bg-gray-100 min-h-screen">
@@ -72,7 +97,7 @@ export default function Timetable() {
         </div>
 
         {/* ACTION BUTTONS */}
-        <div className="flex gap-2">
+        <div className="flex flex-col items-end gap-2">
           {isEditing && (
             <button
               onClick={handleResetAll}
@@ -85,23 +110,58 @@ export default function Timetable() {
           <button
             onClick={async () => {
               if (isEditing) {
-                await handleDone(); // ✅ save once
+                await handleDone();
               } else {
                 setIsEditing(true);
               }
             }}
-            className={`px-3 py-1.5 text-sm rounded-lg border transition ${
+            className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border transition ${
               isEditing
                 ? "bg-black text-white"
                 : "bg-white hover:bg-gray-100"
             }`}
           >
-            {isEditing ? "Done" : "Edit Optional"}
+            {isEditing ? (
+              <>
+                <Check size={16} />
+                Done
+              </>
+            ) : (
+              <>
+                <Pencil size={16} />
+                Edit Optional
+              </>
+            )}
           </button>
+
+          {/* 📥 DOWNLOAD BUTTON */}
+          {!isEditing && (
+            <button
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg border shadow-sm transition ${
+                isDownloading
+                  ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  : "bg-black text-white hover:bg-gray-800"
+              }`}
+            >
+              {isDownloading ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></span>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Download size={16} />
+                  Download Timetable
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* 📱 SWIPE CONTAINER */}
+      {/* SWIPE CONTAINER */}
       <div
         onTouchStart={(e) => {
           if (e.target.closest("select")) return;
@@ -134,7 +194,6 @@ export default function Timetable() {
           handleOverride={handleOverride}
           subjects={subjects}
           subjectColorMap={subjectColorMap}
-
           dragX={dragX}
           isDragging={isDragging}
           handleTouchStart={handleTouchStart}
@@ -156,7 +215,7 @@ export default function Timetable() {
         />
       </div>
 
-      {/* 🔥 GLOBAL MODAL */}
+      {/* GLOBAL MODAL */}
       {showLeaveModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white p-5 rounded-xl w-80 shadow-lg">
