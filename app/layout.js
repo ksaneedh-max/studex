@@ -6,10 +6,12 @@ import AuthProvider from "@/components/auth/AuthProvider";
 import MobileHeader from "@/components/layout/MobileHeader";
 import BottomNav from "@/components/layout/BottomNav";
 import ViewportFix from "@/components/layout/ViewportFix";
+import PageTransitionShell from "@/components/layout/PageTransitionShell";
 
 import { usePathname, useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { TAB_ROUTES, getRouteIndex } from "@/lib/navRoutes";
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
@@ -18,47 +20,43 @@ export default function RootLayout({ children }) {
   const isLoginPage = pathname === "/";
   const isSharePage = pathname === "/share";
 
-  const {
-    showLeaveModal,
-    handleDiscardGlobal,
-    handleStayGlobal,
-  } = useAppStore();
+  const { showLeaveModal, handleDiscardGlobal, handleStayGlobal } =
+    useAppStore();
 
   // =========================
-  // 🔥 BODY SCROLL LOCK
+  // BODY SCROLL LOCK
   // =========================
   useEffect(() => {
     document.body.style.overflow = isSharePage ? "hidden" : "";
-    return () => (document.body.style.overflow = "");
+
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [isSharePage]);
 
   // =========================
-  // 🔥 SWIPE SYSTEM (FIXED)
+  // PREFETCH NEIGHBOR ROUTES
+  // =========================
+  useEffect(() => {
+    const index = getRouteIndex(pathname);
+    if (index === -1) return;
+
+    const next = TAB_ROUTES[index + 1];
+    const prev = TAB_ROUTES[index - 1];
+
+    if (next) router.prefetch(next);
+    if (prev) router.prefetch(prev);
+  }, [pathname, router]);
+
+  // =========================
+  // SWIPE NAVIGATION
   // =========================
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const touchCurrentX = useRef(0);
+  const touchCurrentY = useRef(0);
   const touchStartTime = useRef(0);
-
-  const [swipeX, setSwipeX] = useState(0);
-  const [isSwiping, setIsSwiping] = useState(false);
-
-  const routes = [
-    "/attendance",
-    "/marks",
-    "/dashboard",
-    "/timetable",
-    "/planner",
-  ];
-
-  const THRESHOLD = 60;
-  const VELOCITY_THRESHOLD = 0.5;
-
-  // 🔥 Reset on route change (prevents blank bug)
-  useEffect(() => {
-    setSwipeX(0);
-    setIsSwiping(false);
-  }, [pathname]);
+  const isTrackingRef = useRef(false);
 
   const handleTouchStart = (e) => {
     if (e.target.closest("[data-swipe-lock]")) return;
@@ -66,75 +64,67 @@ export default function RootLayout({ children }) {
 
     const touch = e.touches[0];
 
+    isTrackingRef.current = true;
     touchStartX.current = touch.clientX;
     touchStartY.current = touch.clientY;
     touchCurrentX.current = touch.clientX;
+    touchCurrentY.current = touch.clientY;
     touchStartTime.current = Date.now();
-
-    setIsSwiping(true);
   };
 
   const handleTouchMove = (e) => {
-    if (!isSwiping) return;
+    if (!isTrackingRef.current) return;
 
     const touch = e.touches[0];
 
-    const dx = touch.clientX - touchStartX.current;
-    const dy = touch.clientY - touchStartY.current;
-
-    // 🚫 Ignore vertical scroll
-    if (Math.abs(dx) < Math.abs(dy)) return;
-
     touchCurrentX.current = touch.clientX;
-
-    // ✅ tighter, natural drag
-    setSwipeX(dx * 0.35);
+    touchCurrentY.current = touch.clientY;
   };
 
   const handleTouchEnd = () => {
-    if (!isSwiping) return;
+    if (!isTrackingRef.current) return;
+
+    isTrackingRef.current = false;
 
     const dx = touchCurrentX.current - touchStartX.current;
-    const dt = Date.now() - touchStartTime.current;
+    const dy = touchCurrentY.current - touchStartY.current;
+    const dt = Math.max(Date.now() - touchStartTime.current, 16);
     const velocity = Math.abs(dx) / dt;
 
-    const currentIndex = routes.indexOf(pathname);
+    // Ignore vertical intent
+    if (Math.abs(dx) <= Math.abs(dy)) return;
+
+    const currentIndex = getRouteIndex(pathname);
+    if (currentIndex === -1) return;
+
+    const SWIPE_THRESHOLD = 60;
+    const VELOCITY_THRESHOLD = 0.5;
 
     let targetRoute = null;
 
-    // ⚡ Fast swipe
-    if (velocity > VELOCITY_THRESHOLD) {
-      if (dx < 0) targetRoute = routes[currentIndex + 1];
-      else targetRoute = routes[currentIndex - 1];
-    }
-
-    // 👉 Normal swipe
-    else if (Math.abs(dx) > THRESHOLD) {
-      if (dx < 0) targetRoute = routes[currentIndex + 1];
-      else targetRoute = routes[currentIndex - 1];
+    if (velocity > VELOCITY_THRESHOLD || Math.abs(dx) > SWIPE_THRESHOLD) {
+      if (dx < 0) {
+        targetRoute = TAB_ROUTES[currentIndex + 1];
+      } else {
+        targetRoute = TAB_ROUTES[currentIndex - 1];
+      }
     }
 
     if (targetRoute) {
-      // 🔥 Partial slide → avoids blank screen
-      const exitX =
-        dx < 0 ? -window.innerWidth * 0.4 : window.innerWidth * 0.4;
-
-      setSwipeX(exitX);
-
-      // 🔥 Velocity-based timing
-      const duration = Math.max(120, 220 - velocity * 200);
-
-      setTimeout(() => {
-        setSwipeX(0);
-        setIsSwiping(false);
-        router.push(targetRoute);
-      }, duration);
-    } else {
-      // snap back
-      setSwipeX(0);
-      setIsSwiping(false);
+      router.push(targetRoute);
     }
   };
+
+  const mainClassName = `
+    flex-1 bg-gray-100 min-w-0 overflow-hidden
+    ${
+      isLoginPage
+        ? "pt-6 pb-6"
+        : isSharePage
+        ? "p-0"
+        : "pt-20 md:pt-6 pb-24 md:pb-6 p-4 md:p-6"
+    }
+  `;
 
   return (
     <html lang="en">
@@ -162,24 +152,9 @@ export default function RootLayout({ children }) {
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                style={{
-                  transform: `translateX(${swipeX}px)`,
-                  transition: isSwiping
-                    ? "none"
-                    : "transform 0.25s ease",
-                }}
-                className={`
-                  flex-1 bg-gray-100 min-w-0
-                  ${
-                    isLoginPage
-                      ? "overflow-hidden pt-6 pb-6"
-                      : isSharePage
-                      ? "overflow-hidden p-0"
-                      : "overflow-y-auto pt-20 md:pt-6 pb-24 md:pb-6 p-4 md:p-6"
-                  }
-                `}
+                className={mainClassName}
               >
-                {children}
+                <PageTransitionShell>{children}</PageTransitionShell>
               </main>
             </div>
           </div>
