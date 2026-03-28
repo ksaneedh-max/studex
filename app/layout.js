@@ -10,7 +10,7 @@ import PageTransitionShell from "@/components/layout/PageTransitionShell";
 
 import { usePathname, useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { TAB_ROUTES, getRouteIndex } from "@/lib/navRoutes";
 
 export default function RootLayout({ children }) {
@@ -20,22 +20,24 @@ export default function RootLayout({ children }) {
   const isLoginPage = pathname === "/";
   const isSharePage = pathname === "/share";
 
-  const { showLeaveModal, handleDiscardGlobal, handleStayGlobal } =
-    useAppStore();
+  const {
+    showLeaveModal,
+    handleDiscardGlobal,
+    handleStayGlobal,
+  } = useAppStore();
 
   // =========================
-  // BODY SCROLL LOCK
+  // 🔥 BODY SCROLL LOCK
   // =========================
   useEffect(() => {
     document.body.style.overflow = isSharePage ? "hidden" : "";
-
     return () => {
       document.body.style.overflow = "";
     };
   }, [isSharePage]);
 
   // =========================
-  // PREFETCH NEIGHBOR ROUTES
+  // ⚡ PREFETCH (ZERO LAG)
   // =========================
   useEffect(() => {
     const index = getRouteIndex(pathname);
@@ -47,73 +49,6 @@ export default function RootLayout({ children }) {
     if (next) router.prefetch(next);
     if (prev) router.prefetch(prev);
   }, [pathname, router]);
-
-  // =========================
-  // SWIPE NAVIGATION
-  // =========================
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
-  const touchCurrentX = useRef(0);
-  const touchCurrentY = useRef(0);
-  const touchStartTime = useRef(0);
-  const isTrackingRef = useRef(false);
-
-  const handleTouchStart = (e) => {
-    if (e.target.closest("[data-swipe-lock]")) return;
-    if (isLoginPage || isSharePage) return;
-
-    const touch = e.touches[0];
-
-    isTrackingRef.current = true;
-    touchStartX.current = touch.clientX;
-    touchStartY.current = touch.clientY;
-    touchCurrentX.current = touch.clientX;
-    touchCurrentY.current = touch.clientY;
-    touchStartTime.current = Date.now();
-  };
-
-  const handleTouchMove = (e) => {
-    if (!isTrackingRef.current) return;
-
-    const touch = e.touches[0];
-
-    touchCurrentX.current = touch.clientX;
-    touchCurrentY.current = touch.clientY;
-  };
-
-  const handleTouchEnd = () => {
-    if (!isTrackingRef.current) return;
-
-    isTrackingRef.current = false;
-
-    const dx = touchCurrentX.current - touchStartX.current;
-    const dy = touchCurrentY.current - touchStartY.current;
-    const dt = Math.max(Date.now() - touchStartTime.current, 16);
-    const velocity = Math.abs(dx) / dt;
-
-    // Ignore vertical intent
-    if (Math.abs(dx) <= Math.abs(dy)) return;
-
-    const currentIndex = getRouteIndex(pathname);
-    if (currentIndex === -1) return;
-
-    const SWIPE_THRESHOLD = 60;
-    const VELOCITY_THRESHOLD = 0.5;
-
-    let targetRoute = null;
-
-    if (velocity > VELOCITY_THRESHOLD || Math.abs(dx) > SWIPE_THRESHOLD) {
-      if (dx < 0) {
-        targetRoute = TAB_ROUTES[currentIndex + 1];
-      } else {
-        targetRoute = TAB_ROUTES[currentIndex - 1];
-      }
-    }
-
-    if (targetRoute) {
-      router.push(targetRoute);
-    }
-  };
 
   const mainClassName = `
     flex-1 bg-gray-100 min-w-0 overflow-hidden
@@ -148,19 +83,18 @@ export default function RootLayout({ children }) {
             <div className="flex flex-col flex-1 min-w-0">
               <MobileHeader />
 
-              <main
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                className={mainClassName}
-              >
-                <PageTransitionShell>{children}</PageTransitionShell>
+              {/* ✅ ONLY THIS handles swipe + animation */}
+              <main className={mainClassName}>
+                <PageTransitionShell>
+                  {children}
+                </PageTransitionShell>
               </main>
             </div>
           </div>
 
           {!isSharePage && <BottomNav />}
 
+          {/* GLOBAL MODAL */}
           {showLeaveModal && (
             <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
               <div className="bg-white p-5 rounded-xl w-80 shadow-lg">
