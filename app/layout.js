@@ -33,7 +33,7 @@ export default function RootLayout({ children }) {
   }, [isSharePage]);
 
   // =========================
-  // 🔥 FIXED SWIPE SYSTEM
+  // 🔥 SWIPE STATE
   // =========================
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
@@ -54,6 +54,17 @@ export default function RootLayout({ children }) {
   const THRESHOLD = 60;
   const VELOCITY_THRESHOLD = 0.5;
 
+  // =========================
+  // 🔥 RESET ON ROUTE CHANGE (CRITICAL FIX)
+  // =========================
+  useEffect(() => {
+    setSwipeX(0);
+    setIsSwiping(false);
+  }, [pathname]);
+
+  // =========================
+  // 🔥 TOUCH START
+  // =========================
   const handleTouchStart = (e) => {
     if (e.target.closest("[data-swipe-lock]")) return;
     if (isLoginPage || isSharePage) return;
@@ -68,6 +79,9 @@ export default function RootLayout({ children }) {
     setIsSwiping(true);
   };
 
+  // =========================
+  // 🔥 TOUCH MOVE
+  // =========================
   const handleTouchMove = (e) => {
     if (!isSwiping) return;
 
@@ -76,15 +90,18 @@ export default function RootLayout({ children }) {
     const dx = touch.clientX - touchStartX.current;
     const dy = touch.clientY - touchStartY.current;
 
-    // 🚫 Ignore vertical scroll
+    // 🚫 ignore vertical scroll
     if (Math.abs(dx) < Math.abs(dy)) return;
 
     touchCurrentX.current = touch.clientX;
 
-    // ✅ smooth drag
+    // smooth drag
     setSwipeX(dx * 0.5);
   };
 
+  // =========================
+  // 🔥 TOUCH END
+  // =========================
   const handleTouchEnd = () => {
     if (!isSwiping) return;
 
@@ -96,31 +113,30 @@ export default function RootLayout({ children }) {
 
     let targetRoute = null;
 
-    // ⚡ Fast swipe
     if (velocity > VELOCITY_THRESHOLD) {
       if (dx < 0) targetRoute = routes[currentIndex + 1];
       else targetRoute = routes[currentIndex - 1];
-    }
-
-    // 👉 Normal swipe
-    else if (Math.abs(dx) > THRESHOLD) {
+    } else if (Math.abs(dx) > THRESHOLD) {
       if (dx < 0) targetRoute = routes[currentIndex + 1];
       else targetRoute = routes[currentIndex - 1];
     }
 
     if (targetRoute) {
-      // animate out
-      setSwipeX(dx < 0 ? -window.innerWidth : window.innerWidth);
+      const exitX =
+        dx < 0 ? -window.innerWidth : window.innerWidth;
+
+      setSwipeX(exitX);
 
       setTimeout(() => {
+        // 🔥 CRITICAL FIX
+        setSwipeX(0);
+        setIsSwiping(false);
         router.push(targetRoute);
       }, 180);
     } else {
-      // snap back
       setSwipeX(0);
+      setIsSwiping(false);
     }
-
-    setIsSwiping(false);
   };
 
   return (
