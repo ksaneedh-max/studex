@@ -6,16 +6,12 @@ import AuthProvider from "@/components/auth/AuthProvider";
 import MobileHeader from "@/components/layout/MobileHeader";
 import BottomNav from "@/components/layout/BottomNav";
 import ViewportFix from "@/components/layout/ViewportFix";
-import PageTransitionShell from "@/components/layout/PageTransitionShell";
-
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { useEffect } from "react";
-import { TAB_ROUTES, getRouteIndex } from "@/lib/navRoutes";
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
-  const router = useRouter();
 
   const isLoginPage = pathname === "/";
   const isSharePage = pathname === "/share";
@@ -26,40 +22,18 @@ export default function RootLayout({ children }) {
     handleStayGlobal,
   } = useAppStore();
 
-  // =========================
-  // 🔥 BODY SCROLL LOCK
-  // =========================
+  // ✅ THIS IS THE FINAL FIX (body scroll lock)
   useEffect(() => {
-    document.body.style.overflow = isSharePage ? "hidden" : "";
+    if (isSharePage) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
     return () => {
       document.body.style.overflow = "";
     };
   }, [isSharePage]);
-
-  // =========================
-  // ⚡ PREFETCH (ZERO LAG)
-  // =========================
-  useEffect(() => {
-    const index = getRouteIndex(pathname);
-    if (index === -1) return;
-
-    const next = TAB_ROUTES[index + 1];
-    const prev = TAB_ROUTES[index - 1];
-
-    if (next) router.prefetch(next);
-    if (prev) router.prefetch(prev);
-  }, [pathname, router]);
-
-  const mainClassName = `
-    flex-1 bg-gray-100 min-w-0 overflow-hidden
-    ${
-      isLoginPage
-        ? "pt-6 pb-6"
-        : isSharePage
-        ? "p-0"
-        : "pt-20 md:pt-6 pb-24 md:pb-6 p-4 md:p-6"
-    }
-  `;
 
   return (
     <html lang="en">
@@ -83,15 +57,24 @@ export default function RootLayout({ children }) {
             <div className="flex flex-col flex-1 min-w-0">
               <MobileHeader />
 
-              {/* ✅ ONLY THIS handles swipe + animation */}
-              <main className={mainClassName}>
-                <PageTransitionShell>
-                  {children}
-                </PageTransitionShell>
+              <main
+                className={`
+                  flex-1 bg-gray-100 min-w-0
+                  ${
+                    isLoginPage
+                      ? "overflow-hidden pt-6 pb-6"
+                      : isSharePage
+                      ? "overflow-hidden p-0"
+                      : "overflow-y-auto pt-20 md:pt-6 pb-24 md:pb-6 p-4 md:p-6"
+                  }
+                `}
+              >
+                {children}
               </main>
             </div>
           </div>
 
+          {/* Hide bottom nav ONLY on share */}
           {!isSharePage && <BottomNav />}
 
           {/* GLOBAL MODAL */}
