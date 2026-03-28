@@ -9,7 +9,7 @@ import ViewportFix from "@/components/layout/ViewportFix";
 
 import { usePathname, useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
@@ -28,24 +28,20 @@ export default function RootLayout({ children }) {
   // 🔥 BODY SCROLL LOCK
   // =========================
   useEffect(() => {
-    if (isSharePage) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-
-    return () => {
-      document.body.style.overflow = "";
-    };
+    document.body.style.overflow = isSharePage ? "hidden" : "";
+    return () => (document.body.style.overflow = "");
   }, [isSharePage]);
 
   // =========================
-  // 🔥 SWIPE NAVIGATION
+  // 🔥 SWIPE STATE
   // =========================
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
-  const touchEndX = useRef(0);
-  const touchEndY = useRef(0);
+  const touchCurrentX = useRef(0);
+  const touchStartTime = useRef(0);
+
+  const [swipeX, setSwipeX] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
 
   const routes = [
     "/attendance",
@@ -55,43 +51,91 @@ export default function RootLayout({ children }) {
     "/planner",
   ];
 
+  const THRESHOLD = 60;
+  const VELOCITY_THRESHOLD = 0.5;
+
+  // =========================
+  // 🔥 RESET ON ROUTE CHANGE (CRITICAL FIX)
+  // =========================
+  useEffect(() => {
+    setSwipeX(0);
+    setIsSwiping(false);
+  }, [pathname]);
+
+  // =========================
+  // 🔥 TOUCH START
+  // =========================
   const handleTouchStart = (e) => {
-    const touch = e.touches[0];
-    touchStartX.current = touch.clientX;
-    touchStartY.current = touch.clientY;
-  };
-
-  const handleTouchMove = (e) => {
-    const touch = e.touches[0];
-    touchEndX.current = touch.clientX;
-    touchEndY.current = touch.clientY;
-  };
-
-  const handleTouchEnd = () => {
-    // 🚫 Disable swipe on login/share
+    if (e.target.closest("[data-swipe-lock]")) return;
     if (isLoginPage || isSharePage) return;
 
-    const dx = touchStartX.current - touchEndX.current;
-    const dy = touchStartY.current - touchEndY.current;
+    const touch = e.touches[0];
 
-    // 👉 Ignore vertical scrolls
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+    touchCurrentX.current = touch.clientX;
+    touchStartTime.current = Date.now();
+
+    setIsSwiping(true);
+  };
+
+  // =========================
+  // 🔥 TOUCH MOVE
+  // =========================
+  const handleTouchMove = (e) => {
+    if (!isSwiping) return;
+
+    const touch = e.touches[0];
+
+    const dx = touch.clientX - touchStartX.current;
+    const dy = touch.clientY - touchStartY.current;
+
+    // 🚫 ignore vertical scroll
     if (Math.abs(dx) < Math.abs(dy)) return;
 
-    const threshold = 50;
+    touchCurrentX.current = touch.clientX;
+
+    // smooth drag
+    setSwipeX(dx * 0.5);
+  };
+
+  // =========================
+  // 🔥 TOUCH END
+  // =========================
+  const handleTouchEnd = () => {
+    if (!isSwiping) return;
+
+    const dx = touchCurrentX.current - touchStartX.current;
+    const dt = Date.now() - touchStartTime.current;
+    const velocity = Math.abs(dx) / dt;
 
     const currentIndex = routes.indexOf(pathname);
-    if (currentIndex === -1) return;
 
-    // 👉 Swipe LEFT → next
-    if (dx > threshold) {
-      const next = routes[currentIndex + 1];
-      if (next) router.push(next);
+    let targetRoute = null;
+
+    if (velocity > VELOCITY_THRESHOLD) {
+      if (dx < 0) targetRoute = routes[currentIndex + 1];
+      else targetRoute = routes[currentIndex - 1];
+    } else if (Math.abs(dx) > THRESHOLD) {
+      if (dx < 0) targetRoute = routes[currentIndex + 1];
+      else targetRoute = routes[currentIndex - 1];
     }
 
-    // 👉 Swipe RIGHT → previous
-    if (dx < -threshold) {
-      const prev = routes[currentIndex - 1];
-      if (prev) router.push(prev);
+    if (targetRoute) {
+      const exitX =
+        dx < 0 ? -window.innerWidth : window.innerWidth;
+
+      setSwipeX(exitX);
+
+      setTimeout(() => {
+        // 🔥 CRITICAL FIX
+        setSwipeX(0);
+        setIsSwiping(false);
+        router.push(targetRoute);
+      }, 180);
+    } else {
+      setSwipeX(0);
+      setIsSwiping(false);
     }
   };
 
@@ -121,6 +165,12 @@ export default function RootLayout({ children }) {
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
+                style={{
+                  transform: `translateX(${swipeX}px)`,
+                  transition: isSwiping
+                    ? "none"
+                    : "transform 0.25s ease",
+                }}
                 className={`
                   flex-1 bg-gray-100 min-w-0
                   ${
@@ -137,10 +187,8 @@ export default function RootLayout({ children }) {
             </div>
           </div>
 
-          {/* Hide bottom nav ONLY on share */}
           {!isSharePage && <BottomNav />}
 
-          {/* GLOBAL MODAL */}
           {showLeaveModal && (
             <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
               <div className="bg-white p-5 rounded-xl w-80 shadow-lg">
