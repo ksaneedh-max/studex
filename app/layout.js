@@ -6,12 +6,14 @@ import AuthProvider from "@/components/auth/AuthProvider";
 import MobileHeader from "@/components/layout/MobileHeader";
 import BottomNav from "@/components/layout/BottomNav";
 import ViewportFix from "@/components/layout/ViewportFix";
-import { usePathname } from "next/navigation";
+
+import { usePathname, useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   const isLoginPage = pathname === "/";
   const isSharePage = pathname === "/share";
@@ -22,7 +24,9 @@ export default function RootLayout({ children }) {
     handleStayGlobal,
   } = useAppStore();
 
-  // ✅ THIS IS THE FINAL FIX (body scroll lock)
+  // =========================
+  // 🔥 BODY SCROLL LOCK
+  // =========================
   useEffect(() => {
     if (isSharePage) {
       document.body.style.overflow = "hidden";
@@ -34,6 +38,62 @@ export default function RootLayout({ children }) {
       document.body.style.overflow = "";
     };
   }, [isSharePage]);
+
+  // =========================
+  // 🔥 SWIPE NAVIGATION
+  // =========================
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const touchEndX = useRef(0);
+  const touchEndY = useRef(0);
+
+  const routes = [
+    "/attendance",
+    "/marks",
+    "/dashboard",
+    "/timetable",
+    "/planner",
+  ];
+
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+  };
+
+  const handleTouchMove = (e) => {
+    const touch = e.touches[0];
+    touchEndX.current = touch.clientX;
+    touchEndY.current = touch.clientY;
+  };
+
+  const handleTouchEnd = () => {
+    // 🚫 Disable swipe on login/share
+    if (isLoginPage || isSharePage) return;
+
+    const dx = touchStartX.current - touchEndX.current;
+    const dy = touchStartY.current - touchEndY.current;
+
+    // 👉 Ignore vertical scrolls
+    if (Math.abs(dx) < Math.abs(dy)) return;
+
+    const threshold = 50;
+
+    const currentIndex = routes.indexOf(pathname);
+    if (currentIndex === -1) return;
+
+    // 👉 Swipe LEFT → next
+    if (dx > threshold) {
+      const next = routes[currentIndex + 1];
+      if (next) router.push(next);
+    }
+
+    // 👉 Swipe RIGHT → previous
+    if (dx < -threshold) {
+      const prev = routes[currentIndex - 1];
+      if (prev) router.push(prev);
+    }
+  };
 
   return (
     <html lang="en">
@@ -58,6 +118,9 @@ export default function RootLayout({ children }) {
               <MobileHeader />
 
               <main
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
                 className={`
                   flex-1 bg-gray-100 min-w-0
                   ${
