@@ -9,7 +9,7 @@ import ViewportFix from "@/components/layout/ViewportFix";
 
 import { usePathname, useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
@@ -40,12 +40,14 @@ export default function RootLayout({ children }) {
   }, [isSharePage]);
 
   // =========================
-  // 🔥 SWIPE NAVIGATION
+  // 🔥 ADVANCED SWIPE NAV
   // =========================
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
-  const touchEndX = useRef(0);
-  const touchEndY = useRef(0);
+  const touchStartTime = useRef(0);
+
+  const [swipeX, setSwipeX] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
 
   const routes = [
     "/attendance",
@@ -55,44 +57,81 @@ export default function RootLayout({ children }) {
     "/planner",
   ];
 
+  const EDGE_SIZE = 30;
+  const THRESHOLD = 60;
+  const VELOCITY_THRESHOLD = 0.5;
+
   const handleTouchStart = (e) => {
+    if (e.target.closest("[data-swipe-lock]")) return;
+    if (isLoginPage || isSharePage) return;
+
     const touch = e.touches[0];
+
+    // ✅ EDGE SWIPE ONLY
+    if (
+      touch.clientX > EDGE_SIZE &&
+      touch.clientX < window.innerWidth - EDGE_SIZE
+    ) {
+      return;
+    }
+
     touchStartX.current = touch.clientX;
     touchStartY.current = touch.clientY;
+    touchStartTime.current = Date.now();
+
+    setIsSwiping(true);
   };
 
   const handleTouchMove = (e) => {
+    if (!isSwiping) return;
+
     const touch = e.touches[0];
-    touchEndX.current = touch.clientX;
-    touchEndY.current = touch.clientY;
+    const dx = touch.clientX - touchStartX.current;
+    const dy = touch.clientY - touchStartY.current;
+
+    // ignore vertical scroll
+    if (Math.abs(dx) < Math.abs(dy)) return;
+
+    // resistance effect
+    setSwipeX(dx * 0.6);
   };
 
   const handleTouchEnd = () => {
-    // 🚫 Disable swipe on login/share
-    if (isLoginPage || isSharePage) return;
+    if (!isSwiping) return;
 
-    const dx = touchStartX.current - touchEndX.current;
-    const dy = touchStartY.current - touchEndY.current;
-
-    // 👉 Ignore vertical scrolls
-    if (Math.abs(dx) < Math.abs(dy)) return;
-
-    const threshold = 50;
+    const dx = swipeX;
+    const dt = Date.now() - touchStartTime.current;
+    const velocity = Math.abs(dx) / dt;
 
     const currentIndex = routes.indexOf(pathname);
-    if (currentIndex === -1) return;
 
-    // 👉 Swipe LEFT → next
-    if (dx > threshold) {
-      const next = routes[currentIndex + 1];
-      if (next) router.push(next);
+    let targetRoute = null;
+
+    // ⚡ fast swipe
+    if (velocity > VELOCITY_THRESHOLD) {
+      if (dx < 0) targetRoute = routes[currentIndex + 1];
+      else targetRoute = routes[currentIndex - 1];
     }
 
-    // 👉 Swipe RIGHT → previous
-    if (dx < -threshold) {
-      const prev = routes[currentIndex - 1];
-      if (prev) router.push(prev);
+    // 👉 normal swipe
+    else if (Math.abs(dx) > THRESHOLD) {
+      if (dx < 0) targetRoute = routes[currentIndex + 1];
+      else targetRoute = routes[currentIndex - 1];
     }
+
+    if (targetRoute) {
+      // animate out
+      setSwipeX(dx < 0 ? -window.innerWidth : window.innerWidth);
+
+      setTimeout(() => {
+        router.push(targetRoute);
+      }, 150);
+    } else {
+      // snap back
+      setSwipeX(0);
+    }
+
+    setIsSwiping(false);
   };
 
   return (
@@ -121,6 +160,12 @@ export default function RootLayout({ children }) {
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
+                style={{
+                  transform: `translateX(${swipeX}px)`,
+                  transition: isSwiping
+                    ? "none"
+                    : "transform 0.25s ease",
+                }}
                 className={`
                   flex-1 bg-gray-100 min-w-0
                   ${

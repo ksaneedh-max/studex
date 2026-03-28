@@ -161,8 +161,9 @@ export default function Timetable() {
         </div>
       </div>
 
-      {/* SWIPE CONTAINER */}
+      {/* ✅ SWIPE CONTAINER (LOCK GLOBAL SWIPE) */}
       <div
+        data-swipe-lock="true"
         onTouchStart={(e) => {
           if (e.target.closest("select")) return;
           handleTouchStart(e);
