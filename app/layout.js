@@ -28,22 +28,16 @@ export default function RootLayout({ children }) {
   // 🔥 BODY SCROLL LOCK
   // =========================
   useEffect(() => {
-    if (isSharePage) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-
-    return () => {
-      document.body.style.overflow = "";
-    };
+    document.body.style.overflow = isSharePage ? "hidden" : "";
+    return () => (document.body.style.overflow = "");
   }, [isSharePage]);
 
   // =========================
-  // 🔥 ADVANCED SWIPE NAV
+  // 🔥 FIXED SWIPE SYSTEM
   // =========================
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
+  const touchCurrentX = useRef(0);
   const touchStartTime = useRef(0);
 
   const [swipeX, setSwipeX] = useState(0);
@@ -57,7 +51,6 @@ export default function RootLayout({ children }) {
     "/planner",
   ];
 
-  const EDGE_SIZE = 30;
   const THRESHOLD = 60;
   const VELOCITY_THRESHOLD = 0.5;
 
@@ -67,16 +60,9 @@ export default function RootLayout({ children }) {
 
     const touch = e.touches[0];
 
-    // ✅ EDGE SWIPE ONLY
-    if (
-      touch.clientX > EDGE_SIZE &&
-      touch.clientX < window.innerWidth - EDGE_SIZE
-    ) {
-      return;
-    }
-
     touchStartX.current = touch.clientX;
     touchStartY.current = touch.clientY;
+    touchCurrentX.current = touch.clientX;
     touchStartTime.current = Date.now();
 
     setIsSwiping(true);
@@ -86,20 +72,23 @@ export default function RootLayout({ children }) {
     if (!isSwiping) return;
 
     const touch = e.touches[0];
+
     const dx = touch.clientX - touchStartX.current;
     const dy = touch.clientY - touchStartY.current;
 
-    // ignore vertical scroll
+    // 🚫 Ignore vertical scroll
     if (Math.abs(dx) < Math.abs(dy)) return;
 
-    // resistance effect
-    setSwipeX(dx * 0.6);
+    touchCurrentX.current = touch.clientX;
+
+    // ✅ smooth drag
+    setSwipeX(dx * 0.5);
   };
 
   const handleTouchEnd = () => {
     if (!isSwiping) return;
 
-    const dx = swipeX;
+    const dx = touchCurrentX.current - touchStartX.current;
     const dt = Date.now() - touchStartTime.current;
     const velocity = Math.abs(dx) / dt;
 
@@ -107,13 +96,13 @@ export default function RootLayout({ children }) {
 
     let targetRoute = null;
 
-    // ⚡ fast swipe
+    // ⚡ Fast swipe
     if (velocity > VELOCITY_THRESHOLD) {
       if (dx < 0) targetRoute = routes[currentIndex + 1];
       else targetRoute = routes[currentIndex - 1];
     }
 
-    // 👉 normal swipe
+    // 👉 Normal swipe
     else if (Math.abs(dx) > THRESHOLD) {
       if (dx < 0) targetRoute = routes[currentIndex + 1];
       else targetRoute = routes[currentIndex - 1];
@@ -125,7 +114,7 @@ export default function RootLayout({ children }) {
 
       setTimeout(() => {
         router.push(targetRoute);
-      }, 150);
+      }, 180);
     } else {
       // snap back
       setSwipeX(0);
@@ -182,10 +171,8 @@ export default function RootLayout({ children }) {
             </div>
           </div>
 
-          {/* Hide bottom nav ONLY on share */}
           {!isSharePage && <BottomNav />}
 
-          {/* GLOBAL MODAL */}
           {showLeaveModal && (
             <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
               <div className="bg-white p-5 rounded-xl w-80 shadow-lg">
