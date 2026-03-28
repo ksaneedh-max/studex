@@ -10,6 +10,8 @@ import {
 } from "@/lib/storage";
 import { loginUser } from "@/lib/api";
 
+let refreshingPromise = null;
+
 export default function AuthProvider({ children }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -19,22 +21,65 @@ export default function AuthProvider({ children }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+
+    const refreshSession = async (session_id) => {
+      // 🚫 prevent duplicate refresh calls
+      if (refreshingPromise) return refreshingPromise;
+
+      refreshingPromise = (async () => {
+        try {
+          const res = await loginUser({ session_id });
+
+          return {
+            success: true,
+            data: res.data,
+            relogin: res?.meta?.relogin || false,
+          };
+
+        } catch (err) {
+          // 🔴 logout if session expired
+          if (err.code === "SESSION_EXPIRED") {
+            return { success: false, logout: true };
+          }
+
+          // 🔁 retry once (network / timeout)
+          try {
+            const retry = await loginUser({ session_id });
+
+            return {
+              success: true,
+              data: retry.data,
+              relogin: retry?.meta?.relogin || false,
+            };
+          } catch {
+            return { success: false };
+          }
+
+        } finally {
+          refreshingPromise = null;
+        }
+      })();
+
+      return refreshingPromise;
+    };
+
     const init = async () => {
       const savedData = getData();
       const session_id = localStorage.getItem("session_id");
       const lastFetch = getLastFetch();
 
-      const isLoggedIn = !!session_id;
+      let isLoggedIn = !!session_id;
 
       // =========================
-      // 🔹 Restore state
+      // 🔹 Restore cached state
       // =========================
-      if (isLoggedIn && savedData) {
+      if (isLoggedIn && savedData && mounted) {
         setData(savedData);
       }
 
       // =========================
-      // 🔥 AUTO REFRESH
+      // 🔥 AUTO REFRESH (SAFE)
       // =========================
       if (isLoggedIn) {
         const now = Date.now();
@@ -42,34 +87,41 @@ export default function AuthProvider({ children }) {
           !lastFetch || now - lastFetch > 2 * 60 * 1000;
 
         if (isStale) {
-          try {
-            setLoading(true);
+          setLoading(true);
 
-            const res = await loginUser({ session_id });
+          const result = await refreshSession(session_id);
 
-            if (res?.success) {
-              if (res?.meta?.relogin) {
-                console.log("🔐 Auto: Re-logged in (session expired)");
-              } else {
-                console.log("🔄 Auto: Session reused");
-              }
+          if (!mounted) return;
 
-              setData(res.data);
-              saveData(res.data);
+          if (result.success) {
+            if (result.relogin) {
+              console.log("🔐 Auto: Re-logged in (session expired)");
             } else {
-              throw new Error("Session invalid");
+              console.log("🔄 Auto: Session reused");
             }
 
-          } catch (err) {
-            console.log("⚠️ Refresh failed, keeping session");
-          } finally {
-            setLoading(false);
+            setData(result.data);
+            saveData(result.data);
+
+          } else if (result.logout) {
+            console.log("❌ Session expired → logging out");
+
+            localStorage.removeItem("session_id");
+            localStorage.removeItem("app_data");
+            localStorage.removeItem("last_fetch");
+
+            isLoggedIn = false;
+
+          } else {
+            console.log("⚠️ Temporary refresh failure (keeping session)");
           }
+
+          setLoading(false);
         }
       }
 
       // =========================
-      // 🔐 ROUTE CONTROL
+      // 🔐 ROUTE CONTROL (AFTER REFRESH)
       // =========================
       const isApiRoute = pathname.startsWith("/api");
 
@@ -81,14 +133,18 @@ export default function AuthProvider({ children }) {
         router.replace("/dashboard");
       }
 
-      setIsReady(true);
+      if (mounted) setIsReady(true);
     };
 
     init();
+
+    return () => {
+      mounted = false;
+    };
   }, [pathname, router, setData, setLoading]);
 
   // =========================
-  // ⏳ LOADING SCREEN (UPGRADED)
+  // ⏳ LOADING SCREEN
   // =========================
   if (!isReady) {
     return (
