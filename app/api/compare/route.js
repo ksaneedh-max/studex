@@ -1,4 +1,4 @@
-import { redis } from "@/lib/redis";
+import { systemRedis as redis } from "@/lib/redis"; // ✅ switched to systemRedis
 import { nanoid } from "nanoid";
 
 export async function POST(req) {
@@ -24,7 +24,7 @@ export async function POST(req) {
         expires_at: now + TTL * 1000,
         max_users: maxUsers || 3,
         status: "lobby",
-        semester: finalSemester, // ✅ must come from frontend
+        semester: finalSemester,
         creator_id: creatorId,
         users: [
           {
@@ -63,7 +63,7 @@ export async function POST(req) {
         return Response.json({ success: false, message: "Room full" });
       }
 
-      // 🔥 BLOCK DIFFERENT SEMESTERS (CRITICAL)
+      // 🔥 BLOCK DIFFERENT SEMESTERS
       if (
         room.semester &&
         semester &&
