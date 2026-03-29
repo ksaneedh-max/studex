@@ -30,6 +30,7 @@ export default function Sidebar() {
     { name: "Course List", href: "/subjects" },
     { name: "Skip Planner", href: "/skip-planner" },
     { name: "SGPA Calculator", href: "/sgpa" },
+    { name: "Compare", href: "/compare"},
     { name: "Share", href: "/share", icon: Share2 },
   ];
 
