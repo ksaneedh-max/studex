@@ -8,6 +8,9 @@ import { saveData, clearStorage } from "@/lib/storage";
 import { useState, useEffect } from "react";
 import { Share2 } from "lucide-react";
 
+// ✅ NEW: import toast
+import { useToast } from "@/components/toast/ToastProvider";
+
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -17,6 +20,8 @@ export default function Sidebar() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const { setData, setLoading, loading, clearAll } = useAppStore();
+
+  const { showToast } = useToast(); // ✅ use toast
 
   const mainLinks = [
     { name: "Dashboard", href: "/dashboard" },
@@ -30,7 +35,7 @@ export default function Sidebar() {
     { name: "Course List", href: "/subjects" },
     { name: "Skip Planner", href: "/skip-planner" },
     { name: "SGPA Calculator", href: "/sgpa" },
-    { name: "Compare", href: "/compare"},
+    { name: "Compare", href: "/compare" },
     { name: "Share", href: "/share", icon: Share2 },
   ];
 
@@ -53,7 +58,7 @@ export default function Sidebar() {
       const session_id = localStorage.getItem("session_id");
 
       if (!session_id) {
-        alert("Session expired. Please login again.");
+        showToast("Session expired. Please login again.", "error");
         handleLogout();
         return;
       }
@@ -68,8 +73,10 @@ export default function Sidebar() {
 
       if (res?.meta?.relogin) {
         console.log("🔐 Re-logged in (session expired)");
+        showToast("Data fetched", "info");
       } else {
         console.log("🔄 Session refreshed (reused)");
+        showToast("Data refreshed", "success");
       }
 
       setData(res.data);
@@ -77,7 +84,7 @@ export default function Sidebar() {
 
       router.refresh();
     } catch {
-      alert("Session expired. Please login again.");
+      showToast("Session expired. Please login again.", "error");
       handleLogout();
     } finally {
       setLoading(false);
@@ -127,7 +134,6 @@ export default function Sidebar() {
           }
         `}
       >
-        {/* TEXT + ICON */}
         <div className="flex items-center gap-2">
           <span>{link.name}</span>
 
@@ -139,7 +145,6 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* ACTIVE DOT */}
         <div className="ml-auto">
           {active && <span className="text-xs">●</span>}
         </div>
@@ -147,7 +152,6 @@ export default function Sidebar() {
     );
   };
 
-  // ✅ FIXED: Conditional render AFTER hooks
   if (pathname === "/") return null;
 
   return (
