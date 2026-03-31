@@ -102,7 +102,7 @@ export default function AuthProvider({ children }) {
             if (result.relogin) {
               console.log("🔐 Auto: Re-logged in (session expired)");
               setPendingToast({
-                message: "Session expired. Data fetched",
+                message: "Data fetched",
                 type: "info",
               });
             } else {
